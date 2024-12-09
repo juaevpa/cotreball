@@ -7,52 +7,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $_POST['email'];
     $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
-    
+    $privacy_accepted = isset($_POST['privacy_accepted']) ? 1 : 0;
+    $terms_accepted = isset($_POST['terms_accepted']) ? 1 : 0;
+
     $errors = [];
-    
-    // Validaciones
+
     if (empty($username)) {
         $errors[] = "El nombre de usuario es obligatorio";
     }
-    
     if (empty($email)) {
         $errors[] = "El email es obligatorio";
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = "El email no es válido";
     }
-    
     if (empty($password)) {
         $errors[] = "La contraseña es obligatoria";
-    } elseif (strlen($password) < 6) {
-        $errors[] = "La contraseña debe tener al menos 6 caracteres";
     }
-    
     if ($password !== $confirm_password) {
         $errors[] = "Las contraseñas no coinciden";
     }
-    
+    if (!$privacy_accepted || !$terms_accepted) {
+        $errors[] = "Debes aceptar la política de privacidad y los términos y condiciones";
+    }
+
     if (empty($errors)) {
         $db = Database::getInstance()->getConnection();
         
         // Verificar si el usuario ya existe
-        $stmt = $db->prepare("SELECT id FROM users WHERE email = ? OR username = ?");
-        $stmt->execute([$email, $username]);
-        
+        $stmt = $db->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
+        $stmt->execute([$username, $email]);
         if ($stmt->rowCount() > 0) {
-            $errors[] = "El email o nombre de usuario ya está registrado";
+            $errors[] = "El usuario o email ya existe";
         } else {
             // Crear el usuario
-            $stmt = $db->prepare("
-                INSERT INTO users (username, email, password)
-                VALUES (?, ?, ?)
-            ");
-            
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            
-            if ($stmt->execute([$username, $email, $hashed_password])) {
+            $stmt = $db->prepare("INSERT INTO users (username, email, password, privacy_accepted, terms_accepted) VALUES (?, ?, ?, ?, ?)");
+            if ($stmt->execute([$username, $email, $hashed_password, $privacy_accepted, $terms_accepted])) {
                 $_SESSION['user_id'] = $db->lastInsertId();
+                $_SESSION['username'] = $username;
                 $_SESSION['is_admin'] = false;
-                header('Location: /');
+                header("Location: /");
                 exit;
             } else {
                 $errors[] = "Error al crear el usuario";
@@ -60,52 +52,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$pageTitle = 'Registro - Cotreball';
+require_once '../includes/head.php';
+require_once '../includes/header.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Registro - Cotreball</title>
-    <link rel="stylesheet" href="/assets/css/style.css">
-</head>
-<body>
-    <div class="auth-container">
-        <h2>Registro</h2>
-        
-        <?php if (!empty($errors)): ?>
-            <div class="error">
-                <?php foreach ($errors as $error): ?>
-                    <p><?php echo htmlspecialchars($error); ?></p>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-        
-        <form method="POST">
-            <div class="form-group">
-                <label for="username">Nombre de usuario:</label>
-                <input type="text" id="username" name="username" value="<?php echo htmlspecialchars($username ?? ''); ?>" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="email">Email:</label>
-                <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($email ?? ''); ?>" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Contraseña:</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="confirm_password">Confirmar contraseña:</label>
-                <input type="password" id="confirm_password" name="confirm_password" required>
-            </div>
-            
-            <button type="submit" class="button">Registrarse</button>
-        </form>
-        
-        <p>¿Ya tienes cuenta? <a href="/auth/login.php">Inicia sesión aquí</a></p>
-    </div>
-</body>
-</html> 
+<main class="auth-container">
+    <h1>Registro</h1>
+
+    <?php if (!empty($errors)): ?>
+        <div class="error-messages">
+            <?php foreach ($errors as $error): ?>
+                <p class="error"><?php echo htmlspecialchars($error); ?></p>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+
+    <form method="POST" class="auth-form">
+        <div class="form-group">
+            <label for="username">Nombre de usuario</label>
+            <input type="text" id="username" name="username" required value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>">
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
+        </div>
+
+        <div class="form-group">
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+
+        <div class="form-group">
+            <label for="confirm_password">Confirmar Contraseña</label>
+            <input type="password" id="confirm_password" name="confirm_password" required>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <input type="checkbox" id="privacy_accepted" name="privacy_accepted" required>
+            <label for="privacy_accepted">He leído y acepto la <a href="/legal/privacy.php" target="_blank">Política de Privacidad</a> y el tratamiento de mis datos personales</label>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <input type="checkbox" id="terms_accepted" name="terms_accepted" required>
+            <label for="terms_accepted">He leído y acepto los <a href="/legal/terms.php" target="_blank">Términos y Condiciones</a> del servicio</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Registrarse</button>
+    </form>
+
+    <p class="auth-link">¿Ya tienes cuenta? <a href="/auth/login.php">Inicia sesión</a></p>
+</main>
+
+<?php require_once '../includes/footer.php'; ?> 

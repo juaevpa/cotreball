@@ -36,6 +36,21 @@ header {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: var(--transition);
+}
+
+.menu-toggle:hover {
+  color: var(--accent-color);
+}
+
 .header-right {
   display: flex;
   align-items: center;
@@ -106,9 +121,11 @@ header h1 .logo:hover {
 
 main {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
   padding: 1rem;
+  min-height: 600px;
+  height: calc(100vh - 200px);
 }
 
 @media (min-width: 768px) {
@@ -117,10 +134,55 @@ main {
   }
 }
 
+.map-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
 #map {
-  height: 400px;
+  height: 100%;
+  width: 100%;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
+}
+
+#spacesList {
+  overflow-y: auto;
+  max-height: 100%;
+  padding-right: 0.5rem;
+}
+
+.spaces-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  height: 100vh;
+}
+
+.spaces-list {
+  overflow-y: auto;
+  padding-right: 1rem;
+  max-height: calc(100vh - 100px);
+}
+
+/* Ajuste responsive */
+@media (max-width: 768px) {
+  main {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  #map {
+    height: 400px;
+    position: relative;
+    top: 0;
+  }
+
+  #spacesList {
+    max-height: none;
+    padding-right: 0;
+  }
 }
 
 .space-card {
@@ -152,55 +214,129 @@ main {
   color: var(--secondary-color);
 }
 
-.price {
+.space-card .location {
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.space-card .prices {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.space-card .price,
+.space-card .monthly-price {
   font-weight: bold;
   color: var(--secondary-color);
 }
 
-.availability .available {
-  color: #27ae60;
+.space-card .availability {
+  margin-top: 0.5rem;
 }
 
-.availability .unavailable {
-  color: #e74c3c;
+.space-card .availability .available {
+  color: var(--success-color);
+}
+
+.space-card .availability .unavailable {
+  color: var(--error-color);
 }
 
 .auth-container {
-  max-width: 400px;
+  max-width: 500px;
   margin: 2rem auto;
-  padding: 2rem;
+  padding: 3rem;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  grid-template-columns: auto;
+  height: auto;
 }
 
-.form-group {
-  margin-bottom: 1rem;
+.auth-container h1 {
+  text-align: left;
+  margin-bottom: 3rem;
+  color: var(--primary-color);
+  font-size: 2rem;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-.form-group label.checkbox-label {
+.auth-form {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.auth-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.auth-form .checkbox-group {
+  flex-direction: row;
+  align-items: flex-start;
   gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.auth-form .checkbox-group input[type="checkbox"] {
+  margin-top: 0.25rem;
+}
+
+.auth-form label {
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.auth-form input[type="text"],
+.auth-form input[type="email"],
+.auth-form input[type="password"] {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: #f8f9fa;
+}
+
+.auth-form button {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  font-size: 1rem;
+  font-weight: 500;
+  background-color: #f8f9fa;
+  color: var(--text-color);
+  border: none;
+  border-radius: 4px;
   cursor: pointer;
 }
 
-.form-group label.checkbox-label input[type="checkbox"] {
-  width: auto;
-  margin: 0;
+.auth-form button:hover {
+  background-color: #e9ecef;
 }
 
-.form-group input,
-.form-group textarea {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ddd;
+.auth-link {
+  text-align: left;
+  margin-top: 2rem;
+  color: var(--text-color);
+}
+
+.auth-link a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.error-messages {
+  background-color: #fff2f2;
+  border: 1px solid #ffcdd2;
   border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+}
+
+.error-messages .error {
+  color: #d32f2f;
+  margin: 0.5rem 0;
 }
 
 .space-detail {
@@ -461,7 +597,7 @@ footer {
 
 @media (min-width: 768px) {
   .space-content {
-    grid-template-columns: 2fr 1fr;
+    /* grid-template-columns: 2fr 1fr;*/
   }
 }
 
@@ -521,9 +657,11 @@ footer {
 }
 
 .location-map {
-  height: 300px;
+  height: 400px !important;
+  width: 100%;
   border-radius: 8px;
-  margin-top: 1rem;
+  margin: 1rem 0;
+  box-shadow: var(--card-shadow);
 }
 
 .current-images {
@@ -854,6 +992,7 @@ footer {
   max-width: 1200px;
   margin: 2rem auto;
   padding: 0 1rem;
+  width: 100%;
 }
 
 .container h2 {
@@ -938,4 +1077,367 @@ footer {
 
 .space-actions form .button {
   height: 100%;
+}
+
+@media (max-width: 768px) {
+  header {
+    flex-wrap: wrap;
+    padding: 1rem;
+  }
+
+  header h1 {
+    font-size: 2rem;
+  }
+
+  .menu-toggle {
+    display: block;
+    order: 2;
+  }
+
+  .search-container {
+    order: 3;
+    width: 100%;
+    margin: 1rem 0;
+    min-width: unset;
+  }
+
+  .header-right {
+    display: none;
+    width: 100%;
+    order: 4;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .header-right.active {
+    display: flex;
+  }
+
+  .main-nav {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .nav-link {
+    width: 100%;
+    text-align: center;
+    padding: 0.8rem;
+  }
+
+  .icon-link {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+  }
+}
+
+@media (max-width: 768px) {
+  .footer-content {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .footer-links {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+/* Estilos para páginas legales */
+.legal-content {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  line-height: 1.6;
+}
+
+.legal-content h1 {
+  color: #333;
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.legal-content section {
+  margin-bottom: 2.5rem;
+}
+
+.legal-content h2 {
+  color: #444;
+  font-size: 1.5rem;
+  margin: 1.5rem 0 1rem;
+}
+
+.legal-content p {
+  margin-bottom: 1rem;
+  color: #666;
+}
+
+.legal-content ul {
+  margin: 1rem 0;
+  padding-left: 2rem;
+}
+
+.legal-content li {
+  margin-bottom: 0.5rem;
+  color: #666;
+}
+
+.legal-content strong {
+  color: #444;
+}
+
+.legal-content a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.legal-content a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .legal-content {
+    padding: 0 1.5rem;
+  }
+
+  .legal-content h1 {
+    font-size: 1.75rem;
+  }
+
+  .legal-content h2 {
+    font-size: 1.25rem;
+  }
+}
+
+/* Estilos para el popup del mapa */
+.map-popup {
+  padding: 0.5rem;
+}
+
+.map-popup h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.map-popup h3 a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.map-popup h3 a:hover {
+  color: var(--secondary-color);
+  text-decoration: underline;
+}
+
+.map-popup p {
+  margin: 0.25rem 0;
+  color: #666;
+}
+
+.map-popup .price {
+  font-weight: bold;
+  color: var(--secondary-color);
+}
+
+.map-popup .button {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  background: var(--primary-color);
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: var(--transition);
+}
+
+.map-popup .button:hover {
+  background: var(--secondary-color);
+  transform: translateY(-1px);
+}
+
+.space-card.highlight {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-color: var(--accent-color);
+}
+
+.space-form {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.space-form .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.space-form label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.space-form input[type="text"],
+.space-form input[type="number"],
+.space-form textarea {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: var(--transition);
+}
+
+.space-form textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.space-form input:focus,
+.space-form textarea:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(66, 165, 245, 0.2);
+}
+
+.space-form .checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.space-form .checkbox-group input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.space-form .checkbox-group label {
+  margin: 0;
+  cursor: pointer;
+}
+
+.space-form button[type="submit"] {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+  margin-top: 1rem;
+}
+
+#suggestions {
+  position: absolute;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: var(--card-shadow);
+  z-index: 1000;
+}
+
+.suggestion {
+  padding: 0.8rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.suggestion:hover {
+  background-color: var(--background-color);
+}
+
+/* Estilos para el formulario de administración */
+.admin-form {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: var(--card-shadow);
+}
+
+.admin-form .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.admin-form label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.admin-form input[type="text"],
+.admin-form input[type="number"],
+.admin-form textarea {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: var(--transition);
+}
+
+.admin-form textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.admin-form input:focus,
+.admin-form textarea:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(66, 165, 245, 0.2);
+}
+
+.admin-form .checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-form .checkbox-group input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.admin-form .checkbox-group label {
+  margin: 0;
+  cursor: pointer;
+}
+
+.admin-form button[type="submit"] {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+  margin-top: 1rem;
+}
+
+#suggestions {
+  position: absolute;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: var(--card-shadow);
+  z-index: 1000;
+}
+
+.suggestion {
+  padding: 0.8rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.suggestion:hover {
+  background-color: var(--background-color);
 }

@@ -1,63 +1,58 @@
 <?php
-session_start();
-require_once '../config/database.php';
+$pageTitle = 'Términos y Condiciones - Cotreball';
+require_once '../includes/head.php';
+require_once '../includes/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Términos y Condiciones - Cotreball</title>
-    <link rel="stylesheet" href="/assets/css/style.css">
-</head>
-<body>
-    <header>
-        <h1>Cotreball</h1>
-        <nav class="main-nav">
-            <a href="/" class="nav-link">Inicio</a>
-            <?php if (isset($_SESSION['user_id'])): ?>
-                <?php if ($_SESSION['is_admin']): ?>
-                    <a href="/admin" class="nav-link">Panel Admin</a>
-                <?php endif; ?>
-                <a href="/admin/spaces/create.php" class="nav-link">Crear Espacio</a>
-                <a href="/auth/logout.php" class="nav-link">Cerrar Sesión</a>
-            <?php else: ?>
-                <a href="/auth/login.php" class="nav-link">Iniciar Sesión</a>
-                <a href="/auth/register.php" class="nav-link">Registrarse</a>
-            <?php endif; ?>
-        </nav>
-    </header>
 
-    <div class="container" style="max-width: 800px; margin: 2rem auto; padding: 0 1rem;">
+<div class="container">
+    <div class="legal-content">
         <h1>Términos y Condiciones</h1>
         
-        <h2>1. Introducción</h2>
-        <p>Estos términos y condiciones rigen el uso del sitio web Cotreball y los servicios ofrecidos a través de él.</p>
+        <section>
+            <h2>1. Información Legal</h2>
+            <p>En cumplimiento del artículo 10 de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y Comercio Electrónico, se informa que Cotreball es propiedad de:</p>
+            <ul>
+                <li><strong>Titular:</strong> Juan Manuel Evaristo Palomino</li>
+                <li><strong>DNI:</strong> 20824689Y</li>
+                <li><strong>Dirección:</strong> C/Abril, 1 46800 Xàtiva (Valencia)</li>
+            </ul>
+        </section>
 
-        <h2>2. Uso del Servicio</h2>
-        <p>Al utilizar Cotreball, usted acepta cumplir con estos términos y condiciones. El servicio está destinado a facilitar la búsqueda y publicación de espacios de coworking en España.</p>
+        <section>
+            <h2>2. Objeto</h2>
+            <p>Los presentes términos y condiciones regulan el uso de la plataforma web Cotreball, dedicada a la publicación y búsqueda de espacios de coworking en España.</p>
+        </section>
 
-        <h2>3. Registro y Cuentas de Usuario</h2>
-        <p>Para publicar espacios, es necesario registrarse. Usted es responsable de mantener la confidencialidad de su cuenta y contraseña.</p>
+        <section>
+            <h2>3. Usuarios</h2>
+            <p>El acceso y registro en la plataforma implica la aceptación expresa y sin reservas de estos términos y condiciones.</p>
+        </section>
 
-        <h2>4. Publicación de Espacios</h2>
-        <p>Los espacios publicados deben ser reales y la información proporcionada debe ser precisa y verdadera.</p>
+        <section>
+            <h2>4. Servicios</h2>
+            <p>Cotreball ofrece una plataforma de intermediación entre propietarios de espacios de coworking y usuarios interesados en dichos espacios.</p>
+        </section>
 
-        <h2>5. Responsabilidad</h2>
-        <p>Cotreball actúa como intermediario y no es responsable de las transacciones entre usuarios.</p>
+        <section>
+            <h2>5. Responsabilidades</h2>
+            <p>Cotreball actúa como intermediario y no se hace responsable de la calidad de los espacios publicados ni de las relaciones contractuales entre propietarios y usuarios.</p>
+        </section>
 
-        <h2>6. Modificaciones</h2>
-        <p>Nos reservamos el derecho de modificar estos términos en cualquier momento.</p>
+        <section>
+            <h2>6. Propiedad Intelectual</h2>
+            <p>Todos los contenidos de la plataforma están protegidos por derechos de propiedad intelectual.</p>
+        </section>
+
+        <section>
+            <h2>7. Modificaciones</h2>
+            <p>Cotreball se reserva el derecho de modificar estos términos y condiciones en cualquier momento, siendo efectivos desde su publicación.</p>
+        </section>
+
+        <section>
+            <h2>8. Legislación Aplicable</h2>
+            <p>Estos términos y condiciones se rigen por la legislación española. Para cualquier controversia, las partes se someten a los Juzgados y Tribunales de Xàtiva.</p>
+        </section>
     </div>
+</div>
 
-    <footer>
-        <div class="footer-content">
-            <div>© <?php echo date('Y'); ?> Cotreball</div>
-            <div class="footer-links">
-                <a href="/legal/terms.php">Términos y Condiciones</a>
-                <a href="/legal/privacy.php">Política de Privacidad</a>
-            </div>
-        </div>
-    </footer>
-</body>
-</html> 
+<?php require_once '../includes/footer.php'; ?> 

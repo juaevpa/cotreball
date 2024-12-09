@@ -1,63 +1,88 @@
 <?php
-session_start();
-require_once '../config/database.php';
+$pageTitle = 'Política de Privacidad - Cotreball';
+require_once '../includes/head.php';
+require_once '../includes/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Política de Privacidad - Cotreball</title>
-    <link rel="stylesheet" href="/assets/css/style.css">
-</head>
-<body>
-    <header>
-        <h1>Cotreball</h1>
-        <nav class="main-nav">
-            <a href="/" class="nav-link">Inicio</a>
-            <?php if (isset($_SESSION['user_id'])): ?>
-                <?php if ($_SESSION['is_admin']): ?>
-                    <a href="/admin" class="nav-link">Panel Admin</a>
-                <?php endif; ?>
-                <a href="/admin/spaces/create.php" class="nav-link">Crear Espacio</a>
-                <a href="/auth/logout.php" class="nav-link">Cerrar Sesión</a>
-            <?php else: ?>
-                <a href="/auth/login.php" class="nav-link">Iniciar Sesión</a>
-                <a href="/auth/register.php" class="nav-link">Registrarse</a>
-            <?php endif; ?>
-        </nav>
-    </header>
 
-    <div class="container" style="max-width: 800px; margin: 2rem auto; padding: 0 1rem;">
+<div class="container">
+    <div class="legal-content">
         <h1>Política de Privacidad</h1>
+        
+        <section>
+            <h2>1. Responsable del Tratamiento</h2>
+            <ul>
+                <li><strong>Titular:</strong> Juan Manuel Evaristo Palomino</li>
+                <li><strong>DNI:</strong> 20824689Y</li>
+                <li><strong>Dirección:</strong> C/Abril, 1 46800 Xàtiva (Valencia)</li>
+                <li><strong>Contacto:</strong> A través del formulario de contacto de la web</li>
+            </ul>
+        </section>
 
-        <h2>1. Información que Recopilamos</h2>
-        <p>Recopilamos información personal cuando se registra, publica espacios o interactúa con nuestro sitio.</p>
+        <section>
+            <h2>2. Finalidad del Tratamiento</h2>
+            <p>Sus datos personales serán tratados para:</p>
+            <ul>
+                <li>Gestionar su registro como usuario de la plataforma</li>
+                <li>Gestionar la publicación y búsqueda de espacios de coworking</li>
+                <li>Enviar comunicaciones relacionadas con el servicio</li>
+                <li>Responder a sus consultas y solicitudes</li>
+            </ul>
+        </section>
 
-        <h2>2. Uso de la Información</h2>
-        <p>Utilizamos su información para proporcionar y mejorar nuestros servicios, procesar transacciones y comunicarnos con usted.</p>
+        <section>
+            <h2>3. Legitimación</h2>
+            <p>El tratamiento de sus datos se basa en:</p>
+            <ul>
+                <li>La ejecución del contrato de servicios</li>
+                <li>Su consentimiento expreso</li>
+                <li>El interés legítimo del responsable</li>
+            </ul>
+        </section>
 
-        <h2>3. Protección de Datos</h2>
-        <p>Implementamos medidas de seguridad para proteger su información personal de acuerdo con el RGPD.</p>
+        <section>
+            <h2>4. Conservación de los Datos</h2>
+            <p>Los datos se conservarán mientras:</p>
+            <ul>
+                <li>Mantenga su condición de usuario registrado</li>
+                <li>No solicite su supresión</li>
+                <li>Sean necesarios para cumplir con obligaciones legales</li>
+            </ul>
+        </section>
 
-        <h2>4. Cookies</h2>
-        <p>Utilizamos cookies para mejorar su experiencia de navegación y analizar el uso del sitio.</p>
+        <section>
+            <h2>5. Destinatarios</h2>
+            <p>Sus datos no serán cedidos a terceros, salvo:</p>
+            <ul>
+                <li>Obligación legal</li>
+                <li>Necesidad para la prestación del servicio</li>
+                <li>Consentimiento expreso del interesado</li>
+            </ul>
+        </section>
 
-        <h2>5. Sus Derechos</h2>
-        <p>Tiene derecho a acceder, rectificar y eliminar sus datos personales.</p>
+        <section>
+            <h2>6. Derechos</h2>
+            <p>Puede ejercer sus derechos de:</p>
+            <ul>
+                <li>Acceso</li>
+                <li>Rectificación</li>
+                <li>Supresión</li>
+                <li>Oposición</li>
+                <li>Limitación del tratamiento</li>
+                <li>Portabilidad</li>
+            </ul>
+            <p>Mediante escrito dirigido a: C/Abril, 1 46800 Xàtiva (Valencia)</p>
+        </section>
 
-        <h2>6. Contacto</h2>
-        <p>Para cualquier consulta sobre privacidad, contacte con nosotros en privacy@cotreball.com</p>
+        <section>
+            <h2>7. Medidas de Seguridad</h2>
+            <p>Se han adoptado las medidas técnicas y organizativas necesarias para garantizar la seguridad de los datos personales.</p>
+        </section>
+
+        <section>
+            <h2>8. Modificaciones</h2>
+            <p>Esta política de privacidad puede ser actualizada en cualquier momento, siendo la versión vigente la publicada en el sitio web.</p>
+        </section>
     </div>
+</div>
 
-    <footer>
-        <div class="footer-content">
-            <div>© <?php echo date('Y'); ?> Cotreball</div>
-            <div class="footer-links">
-                <a href="/legal/terms.php">Términos y Condiciones</a>
-                <a href="/legal/privacy.php">Política de Privacidad</a>
-            </div>
-        </div>
-    </footer>
-</body>
-</html> 
+<?php require_once '../includes/footer.php'; ?> 

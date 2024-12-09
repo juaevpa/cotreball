@@ -11,9 +11,7 @@ $headScripts = [
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
     'https://code.jquery.com/jquery-3.7.1.min.js'
 ];
-$scripts = [
-    '/assets/js/main.js'
-];
+$scripts = [];
 
 // Cargar datos de espacios de coworking
 $db = Database::getInstance()->getConnection();
@@ -44,8 +42,16 @@ require_once 'includes/header.php';
                         </a>
                     </h3>
                     <p class="location"><?php echo htmlspecialchars($space['city']); ?></p>
-                    <p class="price"><?php echo number_format($space['price'], 2); ?>€/día</p>
-                    <p class="description"><?php echo htmlspecialchars($space['description']); ?></p>
+                    <?php if ((isset($space['price']) && $space['price'] !== null) || (isset($space['price_month']) && $space['price_month'] !== null)): ?>
+                        <div class="prices">
+                            <?php if (isset($space['price']) && $space['price'] !== null): ?>
+                                <p class="price"><?php echo number_format($space['price'], 2); ?>€/día</p>
+                            <?php endif; ?>
+                            <?php if (isset($space['price_month']) && $space['price_month'] !== null): ?>
+                                <p class="monthly-price"><?php echo number_format($space['price_month'], 2); ?>€/mes</p>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
                     <p class="availability">
                         <span class="<?php echo $space['available'] ? 'available' : 'unavailable'; ?>">
                             <?php echo $space['available'] ? 'Disponible' : 'No disponible'; ?>

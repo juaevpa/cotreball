@@ -1,9 +1,12 @@
 <header>
     <h1><a href="/" class="logo">Cotreball</a></h1>
+    <button class="menu-toggle" aria-label="Menú">
+        <i class="fas fa-bars"></i>
+    </button>
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Buscar por ciudad o provincia...">
+    </div>
     <div class="header-right">
-        <div class="search-container">
-            <input type="text" id="searchInput" placeholder="Buscar por ciudad o provincia...">
-        </div>
         <nav class="main-nav">
             <a href="/" class="nav-link">Inicio</a>
             <a href="/about.php" class="nav-link">Sobre Cotreball</a>
