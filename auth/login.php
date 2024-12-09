@@ -13,17 +13,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($user && password_verify($password, $user['password'])) {
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['is_admin'] = $user['is_admin'];
-        if ($user['is_admin']) {
-            header('Location: /admin');
+        // Solo verificar email si el usuario no viene de un reset de contraseña
+        if (!$user['email_verified'] && !isset($_SESSION['password_reset_completed'])) {
+            $_SESSION['error'] = "Por favor, verifica tu email antes de iniciar sesión.";
         } else {
-            header('Location: /');
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['is_admin'] = $user['is_admin'];
+            // Limpiar la variable de sesión si existe
+            if (isset($_SESSION['password_reset_completed'])) {
+                unset($_SESSION['password_reset_completed']);
+            }
+            if ($user['is_admin']) {
+                header('Location: /admin');
+            } else {
+                header('Location: /');
+            }
+            exit;
         }
-        exit;
+    } else {
+        $_SESSION['error'] = "Credenciales inválidas";
     }
-
-    $error = "Credenciales inválidas";
 }
 
 // Configuración de la página
@@ -36,9 +45,16 @@ require_once '../includes/header.php';
 
 <div class="auth-container">
     <h1>Iniciar Sesión</h1>
-    <?php if (isset($error)): ?>
+    
+    <?php if (isset($_SESSION['error'])): ?>
         <div class="error-messages">
-            <p class="error"><?php echo $error; ?></p>
+            <p class="error"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></p>
+        </div>
+    <?php endif; ?>
+    
+    <?php if (isset($_SESSION['message'])): ?>
+        <div class="success-messages">
+            <p class="success"><?php echo $_SESSION['message']; unset($_SESSION['message']); ?></p>
         </div>
     <?php endif; ?>
     
@@ -56,6 +72,7 @@ require_once '../includes/header.php';
         <button type="submit">Iniciar Sesión</button>
     </form>
     
+    <p class="auth-link">¿Has olvidado tu contraseña? <a href="/auth/forgot-password.php">Recupérala aquí</a></p>
     <p class="auth-link">¿No tienes cuenta? <a href="/auth/register.php">Regístrate aquí</a></p>
 </div>
 

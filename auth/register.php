@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../config/database.php';
+require_once '../includes/email.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'];
@@ -40,12 +41,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Crear el usuario
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             $stmt = $db->prepare("INSERT INTO users (username, email, password, privacy_accepted, terms_accepted) VALUES (?, ?, ?, ?, ?)");
+            
             if ($stmt->execute([$username, $email, $hashed_password, $privacy_accepted, $terms_accepted])) {
-                $_SESSION['user_id'] = $db->lastInsertId();
-                $_SESSION['username'] = $username;
-                $_SESSION['is_admin'] = false;
-                header("Location: /");
-                exit;
+                $userId = $db->lastInsertId();
+                
+                // Generar token de verificación
+                $token = bin2hex(random_bytes(32));
+                $expires = time() + (24 * 60 * 60); // 24 horas
+                
+                $stmt = $db->prepare("INSERT INTO email_verifications (user_id, token, expires_at) VALUES (?, ?, FROM_UNIXTIME(?))");
+                if ($stmt->execute([$userId, $token, $expires])) {
+                    // Enviar email de verificación
+                    if (EmailSender::sendVerificationEmail($email, $token)) {
+                        $_SESSION['message'] = "Registro completado. Por favor, verifica tu email para activar tu cuenta.";
+                        header("Location: /auth/login.php");
+                        exit;
+                    } else {
+                        $errors[] = "Error al enviar el email de verificación";
+                    }
+                } else {
+                    $errors[] = "Error al generar la verificación";
+                }
             } else {
                 $errors[] = "Error al crear el usuario";
             }
@@ -58,7 +74,7 @@ require_once '../includes/head.php';
 require_once '../includes/header.php';
 ?>
 
-<main class="auth-container">
+<div class="auth-container">
     <h1>Registro</h1>
 
     <?php if (!empty($errors)): ?>
@@ -100,10 +116,10 @@ require_once '../includes/header.php';
             <label for="terms_accepted">He leído y acepto los <a href="/legal/terms.php" target="_blank">Términos y Condiciones</a> del servicio</label>
         </div>
 
-        <button type="submit" class="btn btn-primary">Registrarse</button>
+        <button type="submit">Registrarse</button>
     </form>
 
     <p class="auth-link">¿Ya tienes cuenta? <a href="/auth/login.php">Inicia sesión</a></p>
-</main>
+</div>
 
 <?php require_once '../includes/footer.php'; ?> 

@@ -293,10 +293,20 @@ main {
 .auth-form input[type="email"],
 .auth-form input[type="password"] {
   padding: 0.75rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid #e0e0e0;
   border-radius: 4px;
   font-size: 1rem;
-  background-color: #f8f9fa;
+  background-color: white;
+  width: 100%;
+  transition: border-color 0.2s ease;
+}
+
+.auth-form input[type="text"]:focus,
+.auth-form input[type="email"]:focus,
+.auth-form input[type="password"]:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(0, 0, 139, 0.1);
 }
 
 .auth-form button {
@@ -304,15 +314,25 @@ main {
   padding: 0.75rem;
   font-size: 1rem;
   font-weight: 500;
-  background-color: #f8f9fa;
-  color: var(--text-color);
+  background-color: var(--primary-color);
+  color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-shadow: 0 2px 4px rgba(0, 0, 139, 0.2);
 }
 
 .auth-form button:hover {
-  background-color: #e9ecef;
+  background-color: var(--primary-color-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 139, 0.3);
+}
+
+.auth-form button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 139, 0.2);
 }
 
 .auth-link {
@@ -1440,4 +1460,17 @@ footer {
 
 .suggestion:hover {
   background-color: var(--background-color);
+}
+
+.success-messages {
+  background-color: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+}
+
+.success-messages .success {
+  color: #2e7d32;
+  margin: 0.5rem 0;
 }
