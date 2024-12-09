@@ -2,6 +2,19 @@
 session_start();
 require_once 'config/database.php';
 
+// Configuración de la página
+$pageTitle = 'Cotreball - Espacios de Coworking en España';
+$extraStyles = [
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+];
+$headScripts = [
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+    'https://code.jquery.com/jquery-3.7.1.min.js'
+];
+$scripts = [
+    '/assets/js/main.js'
+];
+
 // Cargar datos de espacios de coworking
 $db = Database::getInstance()->getConnection();
 $stmt = $db->query("
@@ -12,44 +25,10 @@ $stmt = $db->query("
     ORDER BY s.created_at DESC
 ");
 $spaces = $stmt->fetchAll(PDO::FETCH_ASSOC);
-?>
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cotreball - Espacios de Coworking en España</title>
-    
-    <!-- Estilos -->
-    <link rel="stylesheet" href="assets/css/style.css">
-    
-    <!-- Leaflet.js para el mapa -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-</head>
-<body>
-    <header>
-        <h1>Cotreball</h1>
-        <nav class="main-nav">
-            <?php if (isset($_SESSION['user_id'])): ?>
-                <?php if ($_SESSION['is_admin']): ?>
-                    <a href="/admin" class="nav-link">Panel Admin</a>
-                <?php endif; ?>
-                <a href="/admin/spaces/create.php" class="nav-link">Crear Espacio</a>
-                <a href="/auth/logout.php" class="nav-link">Cerrar Sesión</a>
-            <?php else: ?>
-                <a href="/auth/login.php" class="nav-link">Iniciar Sesión</a>
-                <a href="/auth/register.php" class="nav-link">Registrarse</a>
-            <?php endif; ?>
-        </nav>
-        <div class="search-container">
-            <input type="text" id="searchInput" placeholder="Buscar por ciudad o provincia...">
-        </div>
-    </header>
+require_once 'includes/head.php';
+require_once 'includes/header.php';
+?>
 
     <main>
         <div id="map"></div>
@@ -77,16 +56,4 @@ $spaces = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </main>
 
-    <footer>
-        <div class="footer-content">
-            <div>© <?php echo date('Y'); ?> Cotreball</div>
-            <div class="footer-links">
-                <a href="/legal/terms.php">Términos y Condiciones</a>
-                <a href="/legal/privacy.php">Política de Privacidad</a>
-            </div>
-        </div>
-    </footer>
-
-    <script src="assets/js/main.js"></script>
-</body>
-</html> 
+<?php require_once 'includes/footer.php'; ?> 
