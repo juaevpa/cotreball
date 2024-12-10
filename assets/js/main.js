@@ -3,6 +3,11 @@ let map;
 let markers = [];
 
 function initMap() {
+  // Verificar si estamos en la página de creación de espacios
+  if (document.querySelector(".space-form")) {
+    return; // No inicializar el mapa si estamos en el formulario de creación
+  }
+
   if (!document.getElementById("map")) return;
 
   // Coordenadas centradas para ver toda España incluyendo Canarias

@@ -18,7 +18,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lat = $_POST['lat'];
     $lng = $_POST['lng'];
     $available = isset($_POST['available']) ? 1 : 0;
-    $data_processing_accepted = isset($_POST['data_processing_accepted']) ? 1 : 0;
 
     $errors = [];
 
@@ -34,18 +33,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($city)) {
         $errors[] = "La ciudad es obligatoria";
     }
-    if (!$data_processing_accepted) {
-        $errors[] = "Debes aceptar el tratamiento de datos";
-    }
 
     if (empty($errors)) {
         $db = Database::getInstance()->getConnection();
         $stmt = $db->prepare("
-            INSERT INTO spaces (name, description, address, city, price, price_month, lat, lng, available, user_id, data_processing_accepted)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO spaces (name, description, address, city, price, price_month, lat, lng, available, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
-        if ($stmt->execute([$name, $description, $address, $city, $price, $price_month, $lat, $lng, $available, $_SESSION['user_id'], $data_processing_accepted])) {
+        if ($stmt->execute([$name, $description, $address, $city, $price, $price_month, $lat, $lng, $available, $_SESSION['user_id']])) {
             header('Location: /admin');
             exit;
         } else {
@@ -90,14 +86,14 @@ require_once '../../includes/header.php';
             </div>
 
             <div class="form-group">
-                <label for="address">Dirección</label>
-                <input type="text" id="address" name="address" required value="<?php echo isset($_POST['address']) ? htmlspecialchars($_POST['address']) : ''; ?>">
-                <div id="suggestions"></div>
+                <label for="city">Ciudad</label>
+                <input type="text" id="city" name="city" required value="<?php echo isset($_POST['city']) ? htmlspecialchars($_POST['city']) : ''; ?>">
             </div>
 
             <div class="form-group">
-                <label for="city">Ciudad</label>
-                <input type="text" id="city" name="city" required value="<?php echo isset($_POST['city']) ? htmlspecialchars($_POST['city']) : ''; ?>">
+                <label for="address">Dirección</label>
+                <input type="text" id="address" name="address" required value="<?php echo isset($_POST['address']) ? htmlspecialchars($_POST['address']) : ''; ?>">
+                <div id="suggestions"></div>
             </div>
 
             <div id="map" style="height: 300px; margin-bottom: 1rem;"></div>
@@ -120,26 +116,21 @@ require_once '../../includes/header.php';
                 <label for="available">Espacio disponible</label>
             </div>
 
-            <div class="form-group checkbox-group">
-                <input type="checkbox" id="data_processing_accepted" name="data_processing_accepted" required>
-                <label for="data_processing_accepted">Acepto el tratamiento de los datos proporcionados según la <a href="/legal/privacy.php" target="_blank">Política de Privacidad</a></label>
-            </div>
-
             <button type="submit" class="btn btn-primary">Crear Espacio</button>
         </form>
     </div>
 </div>
 
 <script>
+// Inicializar mapa fuera del document.ready
+const locationMap = L.map('map').setView([40.4637, -3.7492], 6);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+}).addTo(locationMap);
+
+let locationMarker;
+
 $(document).ready(function() {
-    // Inicializar mapa
-    const map = L.map('map').setView([40.4637, -3.7492], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-
-    let marker;
-
     let typingTimer;
     const doneTypingInterval = 500;
     const addressInput = $('#address');
@@ -159,39 +150,79 @@ $(document).ready(function() {
 
     function getSuggestions() {
         const query = addressInput.val();
-        if (query.length < 3) return;
+        const city = cityInput.val();
 
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=es`)
+        if (query.length < 2) return;
+
+        if (!city) {
+            alert('Por favor, selecciona primero una ciudad');
+            return;
+        }
+
+        const searchQuery = `${query}, ${city}, España`;
+        
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=es&limit=5&addressdetails=1`)
             .then(response => response.json())
             .then(data => {
                 suggestionsDiv.empty();
-                data.forEach(place => {
+                
+                const results = Array.isArray(data) ? data : [data];
+                
+                if (results.length === 0 || !results[0]) {
+                    suggestionsDiv.append($('<div>').addClass('suggestion').text('No se encontraron resultados'));
+                    return;
+                }
+
+                results.forEach(place => {
+                    if (!place) return;
+                    
+                    let displayAddress = '';
+                    if (place.address) {
+                        const parts = [];
+                        if (place.address.road || place.address.pedestrian) {
+                            let street = place.address.road || place.address.pedestrian;
+                            if (place.address.house_number) {
+                                street += ` ${place.address.house_number}`;
+                            }
+                            parts.push(street);
+                        }
+                        if (place.address.suburb && place.address.suburb !== parts[0]) {
+                            parts.push(place.address.suburb);
+                        }
+                        displayAddress = parts.join(', ');
+                    }
+
+                    if (!displayAddress) {
+                        displayAddress = place.display_name.split(',')[0];
+                    }
+
                     const div = $('<div>')
                         .addClass('suggestion')
-                        .text(place.display_name)
+                        .text(displayAddress)
                         .on('click', function() {
-                            addressInput.val(place.display_name);
+                            addressInput.val(displayAddress);
                             latInput.val(place.lat);
                             lngInput.val(place.lon);
-                            cityInput.val(place.address?.city || place.address?.town || place.address?.village || '');
                             
-                            // Actualizar marcador y mapa
                             const newLatLng = [place.lat, place.lon];
-                            if (marker) {
-                                marker.setLatLng(newLatLng);
+                            if (locationMarker) {
+                                locationMarker.setLatLng(newLatLng);
                             } else {
-                                marker = L.marker(newLatLng).addTo(map);
+                                locationMarker = L.marker(newLatLng).addTo(locationMap);
                             }
-                            map.setView(newLatLng, 15);
+                            locationMap.setView(newLatLng, 15);
                             
                             suggestionsDiv.empty();
                         });
                     suggestionsDiv.append(div);
                 });
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                suggestionsDiv.append($('<div>').addClass('suggestion').text('Error al buscar direcciones'));
+            });
     }
 
+    // Cerrar sugerencias al hacer clic fuera
     $(document).on('click', function(e) {
         if (!$(e.target).closest('#suggestions, #address').length) {
             suggestionsDiv.empty();

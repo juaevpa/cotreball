@@ -4,8 +4,11 @@
         <i class="fas fa-bars"></i>
     </button>
     <div class="search-container">
-        <input type="text" id="searchInput" placeholder="Buscar por ciudad o provincia...">
-    </div>
+    <form action="/index.php" method="GET">
+        <input type="text" name="search" id="searchInput" placeholder="Buscar por ciudad o provincia..." required>
+        <button type="submit" style="display: none;"></button>
+    </form>
+</div>
     <div class="header-right">
         <nav class="main-nav">
             <a href="/" class="nav-link">Inicio</a>
@@ -28,4 +31,14 @@
             <?php endif; ?>
         </nav>
     </div>
-</header> 
+</header>
+
+<script>
+document.getElementById('searchInput').addEventListener('keypress', function(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        const searchQuery = encodeURIComponent(this.value);
+        window.location.href = '/index.php?search=' + searchQuery;
+    }
+});
+</script> 
