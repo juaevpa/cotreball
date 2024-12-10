@@ -31,6 +31,10 @@ if (!$_SESSION['is_admin'] && $space['user_id'] !== $_SESSION['user_id']) {
     exit;
 }
 
+$stmtImages = $db->prepare("SELECT * FROM space_images WHERE space_id = ? ORDER BY is_primary DESC");
+$stmtImages->execute([$id]);
+$images = $stmtImages->fetchAll(PDO::FETCH_ASSOC);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = $_POST['name'];
     $description = $_POST['description'];
@@ -41,6 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lat = $_POST['lat'];
     $lng = $_POST['lng'];
     $available = isset($_POST['available']) ? 1 : 0;
+    $email = $_POST['email'] ?? null;
+    $phone = $_POST['phone'] ?? null;
 
     $errors = [];
 
@@ -57,19 +63,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "La ciudad es obligatoria";
     }
 
+    if (isset($_POST['delete_image'])) {
+        $imageId = $_POST['delete_image'];
+
+        try {
+            $db->beginTransaction();
+
+            // Obtener la ruta de la imagen
+            $stmt = $db->prepare("SELECT image_path FROM space_images WHERE id = ?");
+            $stmt->execute([$imageId]);
+            $imagePath = $stmt->fetchColumn();
+
+            if ($imagePath && file_exists($_SERVER['DOCUMENT_ROOT'] . $imagePath)) {
+                unlink($_SERVER['DOCUMENT_ROOT'] . $imagePath);
+            }
+
+            // Eliminar la imagen de la base de datos
+            $stmt = $db->prepare("DELETE FROM space_images WHERE id = ?");
+            $stmt->execute([$imageId]);
+
+            $db->commit();
+            header("Location: /admin/spaces/edit.php?id=" . $id);
+            exit;
+        } catch (Exception $e) {
+            $db->rollBack();
+            $errors[] = "Error al eliminar la imagen: " . $e->getMessage();
+        }
+    }
+
     if (empty($errors)) {
-        $stmt = $db->prepare("
-            UPDATE spaces 
-            SET name = ?, description = ?, address = ?, city = ?, 
-                price = ?, price_month = ?, lat = ?, lng = ?, available = ?
-            WHERE id = ?
-        ");
-        
-        if ($stmt->execute([$name, $description, $address, $city, $price, $price_month, $lat, $lng, $available, $id])) {
+        try {
+            $db->beginTransaction();
+
+            // Actualizar información del espacio
+            $stmt = $db->prepare("
+                UPDATE spaces 
+                SET name = ?, description = ?, address = ?, city = ?, 
+                    price = ?, price_month = ?, lat = ?, lng = ?, available = ?,
+                    email = ?, phone = ?
+                WHERE id = ?
+            ");
+            
+            $stmt->execute([
+                $name, $description, $address, $city, 
+                $price, $price_month, $lat, $lng, $available,
+                $email, $phone, $id
+            ]);
+
+            // Procesar nuevas imágenes
+            if (!empty($_FILES['new_images']['name'][0])) {
+                $uploadDir = '/uploads/spaces/' . $id . '/';
+                if (!is_dir($_SERVER['DOCUMENT_ROOT'] . $uploadDir)) {
+                    mkdir($_SERVER['DOCUMENT_ROOT'] . $uploadDir, 0777, true);
+                }
+
+                foreach ($_FILES['new_images']['tmp_name'] as $key => $tmp_name) {
+                    if ($_FILES['new_images']['error'][$key] === UPLOAD_ERR_OK) {
+                        $fileName = uniqid() . '_' . $_FILES['new_images']['name'][$key];
+                        $filePath = $uploadDir . $fileName;
+
+                        if (move_uploaded_file($tmp_name, $_SERVER['DOCUMENT_ROOT'] . $filePath)) {
+                            $stmt = $db->prepare("INSERT INTO space_images (space_id, image_path, is_primary) VALUES (?, ?, ?)");
+                            // La primera imagen será la principal si no hay otras imágenes
+                            $isPrimary = empty($images) && $key === 0 ? 1 : 0;
+                            $stmt->execute([$id, $filePath, $isPrimary]);
+                        }
+                    }
+                }
+            }
+
+            $db->commit();
             header('Location: /admin');
             exit;
-        } else {
-            $errors[] = "Error al actualizar el espacio";
+        } catch (Exception $e) {
+            $db->rollBack();
+            $errors[] = "Error al actualizar el espacio: " . $e->getMessage();
         }
     }
 }
@@ -98,7 +166,7 @@ require_once '../../includes/header.php';
             </div>
         <?php endif; ?>
 
-        <form method="POST" class="space-form">
+        <form method="POST" class="space-form" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="name">Nombre del espacio</label>
                 <input type="text" id="name" name="name" required value="<?php echo htmlspecialchars($space['name']); ?>">
@@ -138,6 +206,38 @@ require_once '../../includes/header.php';
             <div class="form-group checkbox-group">
                 <input type="checkbox" id="available" name="available" <?php echo $space['available'] ? 'checked' : ''; ?>>
                 <label for="available">Espacio disponible</label>
+            </div>
+
+            <div class="form-group">
+                <label>Imágenes actuales</label>
+                <div class="current-images">
+                    <?php if (!empty($images)): ?>
+                        <?php foreach ($images as $image): ?>
+                            <div class="image-container">
+                                <img src="<?php echo htmlspecialchars($image['image_path']); ?>" alt="Imagen del espacio">
+                                <button type="submit" name="delete_image" value="<?php echo $image['id']; ?>" class="delete-image">
+                                    <i class="fas fa-trash"></i> Eliminar
+                                </button>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="new_images">Añadir nuevas imágenes</label>
+                <input type="file" id="new_images" name="new_images[]" multiple accept="image/*">
+                <small>Puedes seleccionar múltiples imágenes. La primera imagen será la principal si no hay otras imágenes.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email de contacto</label>
+                <input type="text" id="email" name="email" value="<?php echo htmlspecialchars($space['email'] ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Teléfono de contacto</label>
+                <input type="text" id="phone" name="phone" value="<?php echo htmlspecialchars($space['phone'] ?? ''); ?>">
             </div>
 
             <button type="submit" class="btn btn-primary">Actualizar Espacio</button>

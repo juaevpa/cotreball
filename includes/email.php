@@ -5,8 +5,8 @@ class EmailSender {
         $headers = [
             'MIME-Version: 1.0',
             'Content-type: text/html; charset=UTF-8',
-            'From: Cotreball <noreply@cotreball.test>',
-            'Reply-To: noreply@cotreball.test',
+            'From: Cotreball <noreply@cotreball.com>',
+            'Reply-To: noreply@cotreball.com',
             'X-Mailer: PHP/' . phpversion()
         ];
 
@@ -15,7 +15,7 @@ class EmailSender {
 
     public static function sendVerificationEmail($email, $token) {
         $subject = 'Verifica tu cuenta en Cotreball';
-        $verificationLink = 'http://cotreball.test/auth/verify.php?token=' . $token;
+        $verificationLink = 'http://cotreball.com/auth/verify.php?token=' . $token;
         
         $message = "
             <h1>Bienvenido a Cotreball</h1>
@@ -29,7 +29,7 @@ class EmailSender {
 
     public static function sendPasswordResetEmail($email, $token) {
         $subject = 'Recuperar contraseña - Cotreball';
-        $resetLink = 'http://cotreball.test/auth/reset-password.php?token=' . $token;
+        $resetLink = 'http://cotreball.com/auth/reset-password.php?token=' . $token;
         
         $message = "
             <h1>Recuperar contraseña</h1>

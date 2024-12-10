@@ -58,6 +58,11 @@ function downloadAndSaveImage($url, $spaceId) {
     return false;
 }
 
+function cleanPhone($phone) {
+    // Eliminar espacios y el prefijo +34
+    return preg_replace('/[^0-9]/', '', str_replace('+34', '', $phone));
+}
+
 try {
     $db = Database::getInstance()->getConnection();
     
@@ -80,11 +85,11 @@ try {
         INSERT INTO spaces (
             name, city, address, description, 
             lat, lng, price_month, 
-            available, approved, user_id
+            available, approved, user_id, phone, email
         ) VALUES (
             ?, ?, ?, ?, 
             ?, ?, ?, 
-            1, 1, 1
+            1, 1, 1, ?, ?
         )
     ");
     
@@ -102,7 +107,7 @@ try {
     
     // Leer y procesar cada línea
     while (($line = fgetcsv($file)) !== FALSE) {
-        if (count($line) < 7) {
+        if (count($line) < 9) {
             error_log("Línea incompleta en CSV: " . implode(',', $line));
             $errores++;
             continue;
@@ -117,6 +122,10 @@ try {
             $details = cleanData($line[3]);
             $lat = !empty($line[4]) ? floatval($line[4]) : 0;
             $lng = !empty($line[5]) ? floatval($line[5]) : 0;
+            $url_image = cleanData($line[6]);
+            $phone = cleanData($line[8]); // Cambiado: ahora cogemos el teléfono de la columna email
+            $email = cleanData($line[7]); // Cambiado: el email estaba en la columna phone
+            
             $price = extractPrice($details);
             
             // Validar datos obligatorios
@@ -132,7 +141,9 @@ try {
                 $details,
                 $lat,
                 $lng,
-                $price
+                $price,
+                $phone,
+                $email
             ]);
             
             $spaceId = $db->lastInsertId();

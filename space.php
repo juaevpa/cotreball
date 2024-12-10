@@ -106,20 +106,11 @@ require_once 'includes/header.php';
                             </div>
                         <?php endif; ?>
                     </div>
-                    <div class="status-tag <?php echo $space['available'] ? 'available' : 'unavailable'; ?>">
+                    <?php /*<div class="status-tag <?php echo $space['available'] ? 'available' : 'unavailable'; ?>">
                         <?php echo $space['available'] ? 'Disponible' : 'No disponible'; ?>
-                    </div>
+                    </div>*/?>
                 </div>
 
-                <div class="info-section">
-                    <h2>Ubicación</h2>
-                    <p class="location">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <?php echo htmlspecialchars($space['address']); ?><br>
-                        <?php echo htmlspecialchars($space['city']); ?>
-                    </p>
-                    <div id="map" class="location-map"></div>
-                </div>
                 
                 <div class="info-section">
                     <h2>Descripción</h2>
@@ -130,8 +121,36 @@ require_once 'includes/header.php';
 
                 <div class="info-section">
                     <h2>Contacto</h2>
-                    <p class="owner">Publicado por: <?php echo htmlspecialchars($space['owner_name']); ?></p>
+                    <div class="contact-info">
+                        <?php if (!empty($space['phone'])): ?>
+                            <div class="contact-item">
+                                <i class="fas fa-phone"></i>
+                                <a href="tel:<?php echo htmlspecialchars($space['phone']); ?>">
+                                    <?php echo htmlspecialchars($space['phone']); ?>
+                                </a>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($space['email'])): ?>
+                            <div class="contact-item">
+                                <i class="fas fa-envelope"></i>
+                                <a href="mailto:<?php echo htmlspecialchars($space['email']); ?>">
+                                    <?php echo htmlspecialchars($space['email']); ?>
+                                </a>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
+                <div class="info-section">
+                    <h2>Ubicación</h2>
+                    <p class="location">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <?php echo htmlspecialchars($space['address']); ?><br>
+                        <?php echo htmlspecialchars($space['city']); ?>
+                    </p>
+                    <div id="map" class="location-map"></div>
+                </div>
+                
             </div>
         </div>
     </div>

@@ -49,34 +49,43 @@ require_once 'includes/header.php';
     <main>
         <div id="map"></div>
         <div id="spacesList">
-            <?php foreach ($spaces as $space): ?>
-                <div class="space-card" 
-                     data-id="<?php echo $space['id']; ?>"
-                     data-lat="<?php echo $space['lat']; ?>"
-                     data-lng="<?php echo $space['lng']; ?>">
-                    <h3>
-                        <a href="/space.php?id=<?php echo $space['id']; ?>">
-                            <?php echo htmlspecialchars($space['name']); ?>
-                        </a>
-                    </h3>
-                    <p class="location"><?php echo htmlspecialchars($space['city']); ?></p>
-                    <?php if ((isset($space['price']) && $space['price'] !== null) || (isset($space['price_month']) && $space['price_month'] !== null)): ?>
-                        <div class="prices">
-                            <?php if (isset($space['price']) && $space['price'] !== null): ?>
-                                <p class="price"><?php echo number_format($space['price'], 2); ?>€/día</p>
-                            <?php endif; ?>
-                            <?php if (isset($space['price_month']) && $space['price_month'] !== null): ?>
-                                <p class="monthly-price"><?php echo number_format($space['price_month'], 2); ?>€/mes</p>
-                            <?php endif; ?>
-                        </div>
+            <?php if (empty($spaces)): ?>
+                <div class="no-results">
+                    <p>No se encontraron espacios de coworking que coincidan con tu búsqueda.</p>
+                    <?php if ($searchQuery): ?>
+                        <p>Prueba con otros términos de búsqueda o <a href="index.php">ver todos los espacios</a>.</p>
                     <?php endif; ?>
-                    <p class="availability">
-                        <span class="<?php echo $space['available'] ? 'available' : 'unavailable'; ?>">
-                            <?php echo $space['available'] ? 'Disponible' : 'No disponible'; ?>
-                        </span>
-                    </p>
                 </div>
-            <?php endforeach; ?>
+            <?php else: ?>
+                <?php foreach ($spaces as $space): ?>
+                    <div class="space-card" 
+                         data-id="<?php echo $space['id']; ?>"
+                         data-lat="<?php echo $space['lat']; ?>"
+                         data-lng="<?php echo $space['lng']; ?>">
+                        <h3>
+                            <a href="/space.php?id=<?php echo $space['id']; ?>">
+                                <?php echo htmlspecialchars($space['name']); ?>
+                            </a>
+                        </h3>
+                        <p class="location"><?php echo htmlspecialchars($space['city']); ?></p>
+                        <?php if ((isset($space['price']) && $space['price'] !== null) || (isset($space['price_month']) && $space['price_month'] !== null)): ?>
+                            <div class="prices">
+                                <?php if (isset($space['price']) && $space['price'] !== null): ?>
+                                    <p class="price"><?php echo number_format($space['price'], 2); ?>€/día</p>
+                                <?php endif; ?>
+                                <?php if (isset($space['price_month']) && $space['price_month'] !== null): ?>
+                                    <p class="monthly-price"><?php echo number_format($space['price_month'], 2); ?>€/mes</p>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                        <?php /*<p class="availability">
+                            <span class="<?php echo $space['available'] ? 'available' : 'unavailable'; ?>">
+                                <?php echo $space['available'] ? 'Disponible' : 'No disponible'; ?>
+                            </span>
+                        </p>*/?>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </main>
 
@@ -93,9 +102,10 @@ require_once 'includes/header.php';
     // Añadir marcadores
     <?php foreach ($spaces as $space): ?>
         L.marker([<?php echo $space['lat']; ?>, <?php echo $space['lng']; ?>])
-            .addTo(map)
-            .bindPopup("<b><?php echo htmlspecialchars($space['name']); ?></b><br><?php echo htmlspecialchars($space['description']); ?>");
+    .addTo(map)
+    .bindPopup("<?php echo addslashes("<div class=\"map-popup\"><h3><a href=\"/space.php?id={$space['id']}\">" . htmlspecialchars($space['name']) . "</a></h3><p>" . htmlspecialchars($space['city']) . "</p><a href=\"/space.php?id={$space['id']}\" class=\"button\">Ver detalles</a></div>"); ?>");
     <?php endforeach; ?>
+
 </script>
 
 <?php require_once 'includes/footer.php'; ?> 

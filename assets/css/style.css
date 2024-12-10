@@ -96,17 +96,55 @@ header h1 .logo:hover {
 
 .search-container {
   min-width: 300px;
+  position: relative;
+}
+
+.search-container form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 #searchInput {
   width: 100%;
   padding: 0.8rem;
+  padding-right: 40px;
   border: 2px solid transparent;
   border-radius: 4px;
   font-size: 1rem;
   transition: var(--transition);
   background: rgba(255, 255, 255, 0.1);
   color: white;
+}
+
+.search-container button[type="submit"] {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--accent-color);
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  font-size: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.search-container button[type="submit"]:hover {
+  background: var(--primary-color);
+  transform: translateY(-50%) scale(1.1);
+}
+
+#searchInput:focus + button[type="submit"] {
+  color: var(--primary-color);
 }
 
 #searchInput::placeholder {
@@ -689,6 +727,9 @@ footer {
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 1rem;
   margin: 1rem 0;
+}
+.current-images img {
+  max-width: 100%;
 }
 
 .image-item {
@@ -1473,4 +1514,53 @@ footer {
 .success-messages .success {
   color: #2e7d32;
   margin: 0.5rem 0;
+}
+
+.no-results {
+  text-align: center;
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin: 2rem auto;
+  max-width: 600px;
+}
+
+.no-results p {
+  margin: 0.5rem 0;
+  color: #6c757d;
+}
+
+.no-results a {
+  color: #0056b3;
+  text-decoration: none;
+}
+
+.no-results a:hover {
+  text-decoration: underline;
+}
+
+.contact-info {
+  margin-top: 1rem;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.contact-item i {
+  margin-right: 1rem;
+  color: #666;
+  width: 20px;
+}
+
+.contact-item a {
+  color: #333;
+  text-decoration: none;
+}
+
+.contact-item a:hover {
+  color: #007bff;
+  text-decoration: underline;
 }

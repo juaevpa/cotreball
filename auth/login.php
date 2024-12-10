@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($user && password_verify($password, $user['password'])) {
         // Solo verificar email si el usuario no viene de un reset de contraseña
-        if (!$user['email_verified'] && !isset($_SESSION['password_reset_completed'])) {
+        if (!$user['email_verified']) {
             $_SESSION['error'] = "Por favor, verifica tu email antes de iniciar sesión.";
         } else {
             $_SESSION['user_id'] = $user['id'];
