@@ -13,15 +13,33 @@ $headScripts = [
 ];
 $scripts = [];
 
+// Obtener la consulta de búsqueda
+$searchQuery = $_GET['search'] ?? '';
+
 // Cargar datos de espacios de coworking
 $db = Database::getInstance()->getConnection();
-$stmt = $db->query("
-    SELECT s.*, u.username as owner_name 
-    FROM spaces s 
-    LEFT JOIN users u ON s.user_id = u.id 
-    WHERE s.approved = 1
-    ORDER BY s.created_at DESC
-");
+
+if ($searchQuery) {
+    $stmt = $db->prepare("
+        SELECT s.*, u.username as owner_name 
+        FROM spaces s 
+        LEFT JOIN users u ON s.user_id = u.id 
+        WHERE s.approved = 1 
+        AND (s.city LIKE :search OR s.name LIKE :search)
+        ORDER BY s.created_at DESC
+    ");
+    $stmt->bindValue(':search', '%' . $searchQuery . '%');
+    $stmt->execute();
+} else {
+    $stmt = $db->query("
+        SELECT s.*, u.username as owner_name 
+        FROM spaces s 
+        LEFT JOIN users u ON s.user_id = u.id 
+        WHERE s.approved = 1
+        ORDER BY s.created_at DESC
+    ");
+}
+
 $spaces = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 require_once 'includes/head.php';
@@ -61,5 +79,23 @@ require_once 'includes/header.php';
             <?php endforeach; ?>
         </div>
     </main>
+
+<script>
+    // Inicializar el mapa
+    var map = L.map('map').setView([40.4168, -3.7038], 6); // Centrado en España
+
+    // Añadir capa de mapa
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Añadir marcadores
+    <?php foreach ($spaces as $space): ?>
+        L.marker([<?php echo $space['lat']; ?>, <?php echo $space['lng']; ?>])
+            .addTo(map)
+            .bindPopup("<b><?php echo htmlspecialchars($space['name']); ?></b><br><?php echo htmlspecialchars($space['description']); ?>");
+    <?php endforeach; ?>
+</script>
 
 <?php require_once 'includes/footer.php'; ?> 

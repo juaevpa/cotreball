@@ -6,7 +6,7 @@
     <div class="search-container">
     <form action="/index.php" method="GET">
         <input type="text" name="search" id="searchInput" placeholder="Buscar por ciudad o provincia..." required>
-        <button type="submit" style="display: none;"></button>
+        <button type="submit" ></button>
     </form>
 </div>
     <div class="header-right">
