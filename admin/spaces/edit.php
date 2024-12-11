@@ -15,8 +15,7 @@ if (!$id) {
     exit;
 }
 
-$db = Database::getInstance()->getConnection();
-$stmt = $db->prepare("SELECT * FROM spaces WHERE id = ?");
+$stmt = $pdo->prepare("SELECT * FROM spaces WHERE id = ?");
 $stmt->execute([$id]);
 $space = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -31,7 +30,7 @@ if (!$_SESSION['is_admin'] && $space['user_id'] !== $_SESSION['user_id']) {
     exit;
 }
 
-$stmtImages = $db->prepare("SELECT * FROM space_images WHERE space_id = ? ORDER BY is_primary DESC");
+$stmtImages = $pdo->prepare("SELECT * FROM space_images WHERE space_id = ? ORDER BY is_primary DESC");
 $stmtImages->execute([$id]);
 $images = $stmtImages->fetchAll(PDO::FETCH_ASSOC);
 
@@ -67,10 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $imageId = $_POST['delete_image'];
 
         try {
-            $db->beginTransaction();
+            $pdo->beginTransaction();
 
             // Obtener la ruta de la imagen
-            $stmt = $db->prepare("SELECT image_path FROM space_images WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT image_path FROM space_images WHERE id = ?");
             $stmt->execute([$imageId]);
             $imagePath = $stmt->fetchColumn();
 
@@ -79,24 +78,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Eliminar la imagen de la base de datos
-            $stmt = $db->prepare("DELETE FROM space_images WHERE id = ?");
+            $stmt = $pdo->prepare("DELETE FROM space_images WHERE id = ?");
             $stmt->execute([$imageId]);
 
-            $db->commit();
+            $pdo->commit();
             header("Location: /admin/spaces/edit.php?id=" . $id);
             exit;
         } catch (Exception $e) {
-            $db->rollBack();
+            $pdo->rollBack();
             $errors[] = "Error al eliminar la imagen: " . $e->getMessage();
         }
     }
 
     if (empty($errors)) {
         try {
-            $db->beginTransaction();
+            $pdo->beginTransaction();
 
             // Actualizar información del espacio
-            $stmt = $db->prepare("
+            $stmt = $pdo->prepare("
                 UPDATE spaces 
                 SET name = ?, description = ?, address = ?, city = ?, 
                     price = ?, price_month = ?, lat = ?, lng = ?, available = ?,
@@ -123,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $filePath = $uploadDir . $fileName;
 
                         if (move_uploaded_file($tmp_name, $_SERVER['DOCUMENT_ROOT'] . $filePath)) {
-                            $stmt = $db->prepare("INSERT INTO space_images (space_id, image_path, is_primary) VALUES (?, ?, ?)");
+                            $stmt = $pdo->prepare("INSERT INTO space_images (space_id, image_path, is_primary) VALUES (?, ?, ?)");
                             // La primera imagen será la principal si no hay otras imágenes
                             $isPrimary = empty($images) && $key === 0 ? 1 : 0;
                             $stmt->execute([$id, $filePath, $isPrimary]);
@@ -132,11 +131,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            $db->commit();
+            $pdo->commit();
             header('Location: /admin');
             exit;
         } catch (Exception $e) {
-            $db->rollBack();
+            $pdo->rollBack();
             $errors[] = "Error al actualizar el espacio: " . $e->getMessage();
         }
     }

@@ -15,8 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $city = $_POST['city'];
     $price = $_POST['price'] !== '' ? $_POST['price'] : null;
     $price_month = $_POST['price_month'] !== '' ? $_POST['price_month'] : null;
-    $lat = $_POST['lat'];
-    $lng = $_POST['lng'];
+    $lat = $_POST['lat'] ?? '';
+    $lng = $_POST['lng'] ?? '';
     $available = isset($_POST['available']) ? 1 : 0;
 
     $errors = [];
@@ -33,19 +33,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($city)) {
         $errors[] = "La ciudad es obligatoria";
     }
+    if (empty($lat) || empty($lng)) {
+        $errors[] = "Por favor, selecciona una ubicación en el mapa";
+    }
+
+    if (empty($_FILES['images']['name'][0])) {
+        $errors[] = "Debes subir al menos una imagen";
+    }
 
     if (empty($errors)) {
-        $db = Database::getInstance()->getConnection();
-        $stmt = $db->prepare("
-            INSERT INTO spaces (name, description, address, city, price, price_month, lat, lng, available, user_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-        
-        if ($stmt->execute([$name, $description, $address, $city, $price, $price_month, $lat, $lng, $available, $_SESSION['user_id']])) {
-            header('Location: /admin');
+        try {
+            $db = Database::getInstance()->getConnection();
+            $db->beginTransaction();
+
+            // Generar slug a partir del nombre
+            $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name)));
+
+            // Verificar si el slug ya existe y añadir un número si es necesario
+            $stmt = $db->prepare("SELECT COUNT(*) FROM spaces WHERE slug = ?");
+            $stmt->execute([$slug]);
+            $count = $stmt->fetchColumn();
+
+            if ($count > 0) {
+                $originalSlug = $slug;
+                $counter = 1;
+                do {
+                    $slug = $originalSlug . '-' . $counter;
+                    $stmt->execute([$slug]);
+                    $count = $stmt->fetchColumn();
+                    $counter++;
+                } while ($count > 0);
+            }
+
+            // Modificar la consulta INSERT para incluir el slug
+            $stmt = $db->prepare("
+                INSERT INTO spaces (name, description, address, city, price, price_month, lat, lng, available, user_id, slug)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            
+            $stmt->execute([$name, $description, $address, $city, $price, $price_month, $lat, $lng, $available, $_SESSION['user_id'], $slug]);
+            $spaceId = $db->lastInsertId();
+
+            $uploadDir = '../../uploads/spaces/' . $spaceId . '/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+
+            $stmtImage = $db->prepare("
+                INSERT INTO space_images (space_id, image_path, is_primary)
+                VALUES (?, ?, ?)
+            ");
+
+            foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
+                if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
+                    $fileName = uniqid() . '_' . $_FILES['images']['name'][$key];
+                    $filePath = $uploadDir . $fileName;
+                    
+                    if (move_uploaded_file($tmp_name, $filePath)) {
+                        $isPrimary = $key === 0 ? 1 : 0;
+                        $relativePath = 'uploads/spaces/' . $spaceId . '/' . $fileName;
+                        $stmtImage->execute([$spaceId, $relativePath, $isPrimary]);
+                    }
+                }
+            }
+
+            $db->commit();
+
+            if (!$_SESSION['is_admin']) {
+                $_SESSION['message'] = "Espacio enviado, esperando aprobación.";
+            }
+
+            header('Location: /user/spaces.php');
             exit;
-        } else {
-            $errors[] = "Error al crear el espacio";
+
+        } catch (Exception $e) {
+            $db->rollBack();
+            $errors[] = "Error al crear el espacio: " . $e->getMessage();
         }
     }
 }
@@ -74,7 +137,7 @@ require_once '../../includes/header.php';
             </div>
         <?php endif; ?>
 
-        <form method="POST" class="space-form">
+        <form method="POST" class="space-form" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="name">Nombre del espacio</label>
                 <input type="text" id="name" name="name" required value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name']) : ''; ?>">
@@ -106,6 +169,12 @@ require_once '../../includes/header.php';
             <div class="form-group">
                 <label for="price_month">Precio mensual (€)</label>
                 <input type="number" id="price_month" name="price_month" step="0.01" value="<?php echo isset($_POST['price_month']) ? htmlspecialchars($_POST['price_month']) : ''; ?>">
+            </div>
+
+            <div class="form-group">
+                <label for="images">Imágenes del espacio</label>
+                <input type="file" id="images" name="images[]" multiple accept="image/*" required>
+                <span class="form-help">Puedes seleccionar múltiples imágenes. La primera será la imagen principal.</span>
             </div>
 
             <input type="hidden" id="lat" name="lat" value="<?php echo isset($_POST['lat']) ? htmlspecialchars($_POST['lat']) : ''; ?>">

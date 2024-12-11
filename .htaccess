@@ -1,0 +1,16 @@
+# BEGIN WordPress
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+RewriteRule ^index\.php$ - [L]
+
+# Reglas personalizadas para URLs amigables
+RewriteRule ^espacio/([^/]+)/?$ space.php?slug=$1 [QSA,L]
+RewriteRule ^espacios/?$ spaces.php [QSA,L]
+
+# Reglas WordPress por defecto
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>
+# END WordPress 

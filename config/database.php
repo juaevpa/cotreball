@@ -1,25 +1,21 @@
 <?php
+require_once __DIR__ . '/config.php';
+
 class Database {
     private static $instance = null;
-    private $conn;
+    private $pdo;
 
     private function __construct() {
-        $config = [
-            'host' => 'localhost',
-            'dbname' => 'cotreball',
-            'user' => 'root',
-            'password' => ''  // Por defecto en Laragon
-        ];
-
         try {
-            $this->conn = new PDO(
-                "mysql:host={$config['host']};dbname={$config['dbname']};charset=utf8mb4",
-                $config['user'],
-                $config['password'],
-                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+            $this->pdo = new PDO(
+                "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME,
+                DB_USER,
+                DB_PASS
             );
+            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         } catch(PDOException $e) {
-            die("Error de conexión: " . $e->getMessage());
+            die("Connection failed: " . $e->getMessage());
         }
     }
 
@@ -31,6 +27,12 @@ class Database {
     }
 
     public function getConnection() {
-        return $this->conn;
+        return $this->pdo;
     }
+
+    // Prevenir clonación del objeto
+    private function __clone() {}
+
+    // Prevenir deserialización del objeto
+    public function __wakeup() {}
 } 

@@ -51,7 +51,7 @@ require_once '../includes/header.php';
                         <td><?php echo htmlspecialchars($space['owner_name']); ?></td>
                         <td><?php echo date('d/m/Y', strtotime($space['created_at'])); ?></td>
                         <td>
-                            <a href="/space.php?id=<?php echo $space['id']; ?>" class="button">Ver</a>
+                            <a href="/espacio/<?php echo htmlspecialchars($space['slug'] ?? 'espacio-' . $space['id']); ?>" class="button">Ver</a>
                             <form method="POST" action="/admin/approve_space.php" style="display: inline;">
                                 <input type="hidden" name="space_id" value="<?php echo $space['id']; ?>">
                                 <button type="submit" class="button approve">Aprobar</button>

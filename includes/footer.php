@@ -1,6 +1,6 @@
 <footer>
     <div class="footer-content">
-        <div>© <?php echo date('Y'); ?> Cotreball</div>
+    <div>© <?php echo date('Y'); ?> Cotreball - Diseño y desarrollo por <a href="https://udista.com" rel="nofollow" target="_blank" title="Agencia de desarrollo web" class="udista">Udista</a></div>
         <div class="footer-links">
             <a href="/legal/terms.php">Términos y Condiciones</a>
             <a href="/legal/privacy.php">Política de Privacidad</a>

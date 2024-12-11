@@ -4,22 +4,31 @@
         <i class="fas fa-bars"></i>
     </button>
     <div class="search-container">
-    <form action="/index.php" method="GET">
-        <input type="text" name="search" id="searchInput" placeholder="Buscar por ciudad o provincia..." required>
-        <button type="submit" aria-label="Buscar">
-            <i class="fas fa-search"></i>
-        </button>
-    </form>
-</div>
+        <form action="/index.php" method="GET" id="searchForm">
+            <input type="text" 
+                   name="search" 
+                   id="searchInput" 
+                   placeholder="Buscar por ciudad o provincia..." 
+                   value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>"
+            >
+            <button type="submit" aria-label="Buscar">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+    </div>
     <div class="header-right">
         <nav class="main-nav">
             <a href="/" class="nav-link">Inicio</a>
             <a href="/about.php" class="nav-link">Sobre Cotreball</a>
-            <?php if (isset($_SESSION['user_id'])): ?>
+
+                <a href="/admin/spaces/create.php" class="nav-link">Crear Espacio</a>
+                <?php if (isset($_SESSION['user_id'])): ?>    
                 <?php if ($_SESSION['is_admin']): ?>
                     <a href="/admin" class="nav-link">Panel Admin</a>
+                <?php else: ?>
+                    <a href="/user/spaces.php" class="nav-link">Mis Espacios</a>
                 <?php endif; ?>
-                <a href="/admin/spaces/create.php" class="nav-link">Crear Espacio</a>
+                
                 <a href="/auth/logout.php" class="nav-link icon-link" title="Cerrar Sesión">
                     <i class="fas fa-sign-out-alt"></i>
                 </a>
@@ -36,11 +45,11 @@
 </header>
 
 <script>
-document.getElementById('searchInput').addEventListener('keypress', function(event) {
-    if (event.key === 'Enter') {
+document.getElementById('searchForm').addEventListener('submit', function(event) {
+    const searchInput = document.getElementById('searchInput');
+    if (!searchInput.value.trim()) {
         event.preventDefault();
-        const searchQuery = encodeURIComponent(this.value);
-        window.location.href = '/index.php?search=' + searchQuery;
+        return false;
     }
 });
 </script> 

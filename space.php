@@ -2,31 +2,53 @@
 session_start();
 require_once 'config/database.php';
 
-$space_id = $_GET['id'] ?? null;
-if (!$space_id) {
-    header('Location: /');
-    exit;
+// Obtener la conexión a la base de datos
+$pdo = Database::getInstance()->getConnection();
+
+// Verificar si tenemos un ID (para compatibilidad con enlaces antiguos)
+if (isset($_GET['id'])) {
+    $stmt = $pdo->prepare("SELECT slug FROM spaces WHERE id = ?");
+    $stmt->execute([$_GET['id']]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($result) {
+        header("Location: /espacio/" . $result['slug']);
+        exit;
+    }
 }
 
-$db = Database::getInstance()->getConnection();
-$stmt = $db->prepare("
-    SELECT s.*, u.username as owner_name 
-    FROM spaces s 
-    LEFT JOIN users u ON s.user_id = u.id 
-    WHERE s.id = ? AND (s.approved = 1 OR s.user_id = ?)
-");
-$stmt->execute([$space_id, $_SESSION['user_id'] ?? 0]);
+// Obtener el slug de la URL
+$slug = isset($_GET['slug']) ? $_GET['slug'] : '';
+
+// Consulta modificada para usar slug
+$stmt = $pdo->prepare("SELECT * FROM spaces WHERE slug = ?");
+$stmt->execute([$slug]);
 $space = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$space) {
-    header('Location: /');
+    header("Location: /espacios");
     exit;
 }
 
+// Después de obtener el espacio (línea 26), añadir:
+if (!$space['approved']) {
+    // Permitir ver solo si es el propietario o admin
+    if (!isset($_SESSION['user_id']) || 
+        ($_SESSION['user_id'] !== $space['user_id'] && !$_SESSION['is_admin'])) {
+        header("Location: /espacios");
+        exit;
+    }
+}
+
 // Obtener imágenes del espacio
-$stmt = $db->prepare("SELECT * FROM space_images WHERE space_id = ?");
-$stmt->execute([$space_id]);
+$stmt = $pdo->prepare("SELECT * FROM space_images WHERE space_id = ?");
+$stmt->execute([$space['id']]);
 $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Añadir después de obtener las imágenes (línea 47)
+function ensureLeadingSlash($path) {
+    return $path[0] !== '/' ? '/' . $path : $path;
+}
 
 // Configuración de la página
 $pageTitle = htmlspecialchars($space['name']) . ' - Cotreball';
@@ -66,15 +88,15 @@ require_once 'includes/header.php';
         <?php if (!empty($images)): ?>
         <div class="space-gallery">
             <div class="main-image">
-                <img src="<?php echo htmlspecialchars($images[0]['image_path']); ?>" 
+                <img src="<?php echo htmlspecialchars(ensureLeadingSlash($images[0]['image_path'])); ?>" 
                     alt="Imagen principal de <?php echo htmlspecialchars($space['name']); ?>">
             </div>
             <?php if (count($images) > 1): ?>
             <div class="thumbnail-grid">
                 <?php foreach (array_slice($images, 1) as $image): ?>
-                    <img src="<?php echo htmlspecialchars($image['image_path']); ?>" 
+                    <img src="<?php echo htmlspecialchars(ensureLeadingSlash($image['image_path'])); ?>" 
                         alt="Imagen de <?php echo htmlspecialchars($space['name']); ?>"
-                        onclick="showImage('<?php echo htmlspecialchars($image['image_path']); ?>')">
+                        onclick="showImage('<?php echo htmlspecialchars(ensureLeadingSlash($image['image_path'])); ?>')">
                 <?php endforeach; ?>
             </div>
             <?php endif; ?>
