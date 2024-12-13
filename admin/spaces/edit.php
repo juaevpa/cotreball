@@ -2,9 +2,9 @@
 session_start();
 require_once '../../config/database.php';
 
-// Verificar si el usuario está autenticado
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /auth/login.php');
+// Verificar si el usuario está autenticado y es administrador
+if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
+    header('Location: /login');
     exit;
 }
 
@@ -25,57 +25,25 @@ if (!$space) {
     exit;
 }
 
-// Verificar si el usuario es el propietario o admin
-if (!$_SESSION['is_admin'] && $space['user_id'] !== $_SESSION['user_id']) {
-    header('Location: /admin');
-    exit;
-}
-
 $stmtImages = $pdo->prepare("SELECT * FROM space_images WHERE space_id = ? ORDER BY is_primary DESC");
 $stmtImages->execute([$id]);
 $images = $stmtImages->fetchAll(PDO::FETCH_ASSOC);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = $_POST['name'];
-    $description = $_POST['description'];
-    $address = $_POST['address'];
-    $city = $_POST['city'];
-    $price = $_POST['price'] !== '' ? $_POST['price'] : null;
-    $price_month = $_POST['price_month'] !== '' ? $_POST['price_month'] : null;
-    $lat = $_POST['lat'];
-    $lng = $_POST['lng'];
-    $available = isset($_POST['available']) ? 1 : 0;
-    $email = $_POST['email'] ?? null;
-    $phone = $_POST['phone'] ?? null;
+    try {
+        $pdo->beginTransaction();
 
-    $errors = [];
-
-    if (empty($name)) {
-        $errors[] = "El nombre es obligatorio";
-    }
-    if (empty($description)) {
-        $errors[] = "La descripción es obligatoria";
-    }
-    if (empty($address)) {
-        $errors[] = "La dirección es obligatoria";
-    }
-    if (empty($city)) {
-        $errors[] = "La ciudad es obligatoria";
-    }
-
-    if (isset($_POST['delete_image'])) {
-        $imageId = $_POST['delete_image'];
-
-        try {
-            $pdo->beginTransaction();
-
+        // Procesar eliminación de imagen si se solicita
+        if (isset($_POST['delete_image'])) {
+            $imageId = $_POST['delete_image'];
+            
             // Obtener la ruta de la imagen
             $stmt = $pdo->prepare("SELECT image_path FROM space_images WHERE id = ?");
             $stmt->execute([$imageId]);
             $imagePath = $stmt->fetchColumn();
 
-            if ($imagePath && file_exists($_SERVER['DOCUMENT_ROOT'] . $imagePath)) {
-                unlink($_SERVER['DOCUMENT_ROOT'] . $imagePath);
+            if ($imagePath && file_exists($_SERVER['DOCUMENT_ROOT'] . '/' . $imagePath)) {
+                unlink($_SERVER['DOCUMENT_ROOT'] . '/' . $imagePath);
             }
 
             // Eliminar la imagen de la base de datos
@@ -85,168 +53,285 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->commit();
             header("Location: /admin/spaces/edit.php?id=" . $id);
             exit;
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            $errors[] = "Error al eliminar la imagen: " . $e->getMessage();
         }
-    }
 
-    if (empty($errors)) {
-        try {
-            $pdo->beginTransaction();
+        // Convertir precios a NULL si están vacíos
+        $prices = ['price_day', 'price_week', 'price_month', 'price_fixed'];
+        foreach ($prices as $price) {
+            $_POST[$price] = !empty($_POST[$price]) ? str_replace(',', '.', $_POST[$price]) : null;
+        }
 
-            // Actualizar información del espacio
-            $stmt = $pdo->prepare("
-                UPDATE spaces 
-                SET name = ?, description = ?, address = ?, city = ?, 
-                    price = ?, price_month = ?, lat = ?, lng = ?, available = ?,
-                    email = ?, phone = ?
-                WHERE id = ?
-            ");
+        // Actualizar información del espacio
+        $stmt = $pdo->prepare("
+            UPDATE spaces 
+            SET name = :name,
+                description = :description,
+                city = :city,
+                address = :address,
+                lat = :lat,
+                lng = :lng,
+                phone = :phone,
+                email = :email,
+                price_day = :price_day,
+                price_week = :price_week,
+                price_month = :price_month,
+                price_fixed = :price_fixed,
+                schedule = :schedule,
+                services = :services,
+                capacity = :capacity,
+                space_types = :space_types,
+                approved = :approved
+            WHERE id = :id
+        ");
+        
+        $stmt->execute([
+            'name' => $_POST['name'],
+            'description' => $_POST['description'],
+            'city' => $_POST['city'],
+            'address' => $_POST['address'],
+            'lat' => $_POST['lat'],
+            'lng' => $_POST['lng'],
+            'phone' => $_POST['phone'],
+            'email' => $_POST['email'],
+            'price_day' => $_POST['price_day'],
+            'price_week' => $_POST['price_week'],
+            'price_month' => $_POST['price_month'],
+            'price_fixed' => $_POST['price_fixed'],
+            'schedule' => $_POST['schedule'],
+            'services' => $_POST['services'],
+            'capacity' => $_POST['capacity'],
+            'space_types' => $_POST['space_types'],
+            'approved' => isset($_POST['approved']) ? 1 : 0,
+            'id' => $id
+        ]);
+
+        // Procesar nuevas imágenes
+        if (!empty($_FILES['new_images']['name'][0])) {
+            $uploadDir = 'uploads/spaces/' . $id . '/';
+            $fullUploadDir = $_SERVER['DOCUMENT_ROOT'] . '/' . $uploadDir;
             
-            $stmt->execute([
-                $name, $description, $address, $city, 
-                $price, $price_month, $lat, $lng, $available,
-                $email, $phone, $id
-            ]);
+            if (!is_dir($fullUploadDir)) {
+                mkdir($fullUploadDir, 0777, true);
+            }
 
-            // Procesar nuevas imágenes
-            if (!empty($_FILES['new_images']['name'][0])) {
-                $uploadDir = '/uploads/spaces/' . $id . '/';
-                if (!is_dir($_SERVER['DOCUMENT_ROOT'] . $uploadDir)) {
-                    mkdir($_SERVER['DOCUMENT_ROOT'] . $uploadDir, 0777, true);
-                }
+            $stmt = $pdo->prepare("
+                INSERT INTO space_images (space_id, image_path, is_primary, created_at)
+                VALUES (?, ?, ?, NOW())
+            ");
 
-                foreach ($_FILES['new_images']['tmp_name'] as $key => $tmp_name) {
-                    if ($_FILES['new_images']['error'][$key] === UPLOAD_ERR_OK) {
-                        $fileName = uniqid() . '_' . $_FILES['new_images']['name'][$key];
-                        $filePath = $uploadDir . $fileName;
-
-                        if (move_uploaded_file($tmp_name, $_SERVER['DOCUMENT_ROOT'] . $filePath)) {
-                            $stmt = $pdo->prepare("INSERT INTO space_images (space_id, image_path, is_primary) VALUES (?, ?, ?)");
-                            // La primera imagen será la principal si no hay otras imágenes
-                            $isPrimary = empty($images) && $key === 0 ? 1 : 0;
-                            $stmt->execute([$id, $filePath, $isPrimary]);
-                        }
+            foreach ($_FILES['new_images']['tmp_name'] as $key => $tmp_name) {
+                if ($_FILES['new_images']['error'][$key] === UPLOAD_ERR_OK) {
+                    $filename = uniqid() . '_' . $_FILES['new_images']['name'][$key];
+                    $filepath = $fullUploadDir . $filename;
+                    
+                    if (move_uploaded_file($tmp_name, $filepath)) {
+                        $relativePath = $uploadDir . $filename;
+                        $isPrimary = empty($images) && $key === 0 ? 1 : 0;
+                        $stmt->execute([$id, $relativePath, $isPrimary]);
                     }
                 }
             }
-
-            $pdo->commit();
-            header('Location: /admin');
-            exit;
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            $errors[] = "Error al actualizar el espacio: " . $e->getMessage();
         }
+
+        $pdo->commit();
+        header('Location: /espacio/' . $space['slug']);
+        exit;
+
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $error = "Error al actualizar el espacio: " . $e->getMessage();
     }
 }
 
 $pageTitle = 'Editar Espacio - Cotreball';
 $extraStyles = [
-    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+    'https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css'
 ];
 $headScripts = [
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-    'https://code.jquery.com/jquery-3.7.1.min.js'
+    'https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js'
 ];
 require_once '../../includes/head.php';
 require_once '../../includes/header.php';
 ?>
 
 <div class="container">
-    <div class="admin-form">
-        <h1>Editar Espacio</h1>
+    <h1>Editar Espacio</h1>
 
-        <?php if (!empty($errors)): ?>
-            <div class="error-messages">
-                <?php foreach ($errors as $error): ?>
-                    <p class="error"><?php echo htmlspecialchars($error); ?></p>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
+    <?php if (isset($error)): ?>
+        <div class="alert alert-error"><?php echo $error; ?></div>
+    <?php endif; ?>
 
-        <form method="POST" class="space-form" enctype="multipart/form-data">
+    <form method="POST" enctype="multipart/form-data" class="space-form">
+        <div class="form-group">
+            <label for="name">Nombre *</label>
+            <input type="text" id="name" name="name" required 
+                value="<?php echo htmlspecialchars($space['name']); ?>">
+        </div>
+
+        <div class="form-group">
+            <label for="description">Descripción *</label>
+            <textarea id="description" name="description" required><?php 
+                echo htmlspecialchars($space['description']); 
+            ?></textarea>
+        </div>
+
+        <div class="form-section">
+            <h3>Ubicación</h3>
+            
             <div class="form-group">
-                <label for="name">Nombre del espacio</label>
-                <input type="text" id="name" name="name" required value="<?php echo htmlspecialchars($space['name']); ?>">
-            </div>
-
-            <div class="form-group">
-                <label for="description">Descripción</label>
-                <textarea id="description" name="description" required><?php echo htmlspecialchars($space['description']); ?></textarea>
-            </div>
-
-            <div class="form-group">
-                <label for="address">Dirección</label>
-                <input type="text" id="address" name="address" required value="<?php echo htmlspecialchars($space['address']); ?>">
-                <div id="suggestions"></div>
-            </div>
-
-            <div class="form-group">
-                <label for="city">Ciudad</label>
-                <input type="text" id="city" name="city" required value="<?php echo htmlspecialchars($space['city']); ?>">
-            </div>
-
-            <div id="map" style="height: 300px; margin-bottom: 1rem;"></div>
-
-            <div class="form-group">
-                <label for="price">Precio por día (€)</label>
-                <input type="number" id="price" name="price" step="0.01" value="<?php echo isset($space['price']) && $space['price'] !== null ? number_format((float)$space['price'], 2, '.', '') : ''; ?>">
+                <label for="city">Ciudad *</label>
+                <input type="text" id="city" name="city" required 
+                    value="<?php echo htmlspecialchars($space['city']); ?>">
             </div>
 
             <div class="form-group">
-                <label for="price_month">Precio mensual (€)</label>
-                <input type="number" id="price_month" name="price_month" step="0.01" value="<?php echo isset($space['price_month']) && $space['price_month'] !== null ? number_format((float)$space['price_month'], 2, '.', '') : ''; ?>">
+                <label for="address">Dirección *</label>
+                <input type="text" id="address" name="address" required 
+                    value="<?php echo htmlspecialchars($space['address']); ?>"
+                    placeholder="Primero selecciona una ciudad">
             </div>
 
-            <input type="hidden" id="lat" name="lat" value="<?php echo htmlspecialchars($space['lat']); ?>">
-            <input type="hidden" id="lng" name="lng" value="<?php echo htmlspecialchars($space['lng']); ?>">
+            <div class="form-row" style="display: none;">
+                <div class="form-group">
+                    <label for="lat">Latitud *</label>
+                    <input type="number" id="lat" name="lat" step="any" required 
+                        value="<?php echo htmlspecialchars($space['lat']); ?>">
+                </div>
 
-            <div class="form-group checkbox-group">
-                <input type="checkbox" id="available" name="available" <?php echo $space['available'] ? 'checked' : ''; ?>>
-                <label for="available">Espacio disponible</label>
-            </div>
-
-            <div class="form-group">
-                <label>Imágenes actuales</label>
-                <div class="current-images">
-                    <?php if (!empty($images)): ?>
-                        <?php foreach ($images as $image): ?>
-                            <div class="image-container">
-                                <img src="<?php echo htmlspecialchars($image['image_path']); ?>" alt="Imagen del espacio">
-                                <button type="submit" name="delete_image" value="<?php echo $image['id']; ?>" class="delete-image">
-                                    <i class="fas fa-trash"></i> Eliminar
-                                </button>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+                <div class="form-group">
+                    <label for="lng">Longitud *</label>
+                    <input type="number" id="lng" name="lng" step="any" required 
+                        value="<?php echo htmlspecialchars($space['lng']); ?>">
                 </div>
             </div>
 
+            <div id="map" style="height: 300px;"></div>
+        </div>
+
+        <div class="form-section">
+            <h3>Precios</h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="price_day">Precio por día</label>
+                    <input type="number" id="price_day" name="price_day" step="0.01" 
+                        value="<?php echo isset($space['price_day']) ? number_format($space['price_day'], 2, '.', '') : ''; ?>">
+                </div>
+
+                <div class="form-group">
+                    <label for="price_week">Precio por semana</label>
+                    <input type="number" id="price_week" name="price_week" step="0.01" 
+                        value="<?php echo isset($space['price_week']) ? number_format($space['price_week'], 2, '.', '') : ''; ?>">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="price_month">Precio por mes</label>
+                    <input type="number" id="price_month" name="price_month" step="0.01" 
+                        value="<?php echo isset($space['price_month']) ? number_format($space['price_month'], 2, '.', '') : ''; ?>">
+                </div>
+
+                <div class="form-group">
+                    <label for="price_fixed">Precio puesto fijo</label>
+                    <input type="number" id="price_fixed" name="price_fixed" step="0.01" 
+                        value="<?php echo isset($space['price_fixed']) ? number_format($space['price_fixed'], 2, '.', '') : ''; ?>">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Detalles Adicionales</h3>
+
             <div class="form-group">
-                <label for="new_images">Añadir nuevas imágenes</label>
+                <label for="schedule">Horario</label>
+                <textarea id="schedule" name="schedule"><?php 
+                    echo htmlspecialchars($space['schedule'] ?? ''); 
+                ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="services">Servicios</label>
+                <textarea id="services" name="services"><?php 
+                    echo htmlspecialchars($space['services'] ?? ''); 
+                ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="capacity">Capacidad</label>
+                <textarea id="capacity" name="capacity"><?php 
+                    echo htmlspecialchars($space['capacity'] ?? ''); 
+                ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="space_types">Tipos de Espacio</label>
+                <textarea id="space_types" name="space_types"><?php 
+                    echo htmlspecialchars($space['space_types'] ?? ''); 
+                ?></textarea>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Contacto</h3>
+            
+            <div class="form-group">
+                <label for="phone">Teléfono</label>
+                <input type="tel" id="phone" name="phone" 
+                    value="<?php echo htmlspecialchars($space['phone'] ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" 
+                    value="<?php echo htmlspecialchars($space['email'] ?? ''); ?>">
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Imágenes Actuales</h3>
+            <div class="current-images">
+                <?php if (!empty($images)): ?>
+                    <?php foreach ($images as $image): ?>
+                        <div class="image-container">
+                            <img src="/<?php echo htmlspecialchars($image['image_path']); ?>" 
+                                alt="Imagen del espacio">
+                            <button type="submit" name="delete_image" value="<?php echo $image['id']; ?>" 
+                                class="button delete-image">
+                                <i class="fas fa-trash"></i> Eliminar
+                            </button>
+                            <?php if ($image['is_primary']): ?>
+                                <span class="primary-badge">Principal</span>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+
+            <div class="form-group">
+                <label for="new_images">Añadir nuevas imágenes (máximo 4 en total)</label>
                 <input type="file" id="new_images" name="new_images[]" multiple accept="image/*">
-                <small>Puedes seleccionar múltiples imágenes. La primera imagen será la principal si no hay otras imágenes.</small>
+                <small>La primera imagen será la principal si no hay otras imágenes</small>
             </div>
+        </div>
 
-            <div class="form-group">
-                <label for="email">Email de contacto</label>
-                <input type="text" id="email" name="email" value="<?php echo htmlspecialchars($space['email'] ?? ''); ?>">
-            </div>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="approved" <?php echo $space['approved'] ? 'checked' : ''; ?>>
+                Espacio aprobado
+            </label>
+        </div>
 
-            <div class="form-group">
-                <label for="phone">Teléfono de contacto</label>
-                <input type="text" id="phone" name="phone" value="<?php echo htmlspecialchars($space['phone'] ?? ''); ?>">
-            </div>
-
-            <button type="submit" class="btn btn-primary">Actualizar Espacio</button>
-        </form>
-    </div>
+        <div class="form-actions">
+            <button type="submit" class="button">Guardar Cambios</button>
+            <a href="/admin/spaces" class="button secondary">Cancelar</a>
+        </div>
+    </form>
 </div>
 
 <script>
-$(document).ready(function() {
     // Inicializar mapa
     const map = L.map('map').setView([<?php echo $space['lat']; ?>, <?php echo $space['lng']; ?>], 15);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -255,60 +340,90 @@ $(document).ready(function() {
 
     let marker = L.marker([<?php echo $space['lat']; ?>, <?php echo $space['lng']; ?>]).addTo(map);
 
-    let typingTimer;
-    const doneTypingInterval = 500;
-    const addressInput = $('#address');
-    const suggestionsDiv = $('#suggestions');
-    const latInput = $('#lat');
-    const lngInput = $('#lng');
-    const cityInput = $('#city');
-
-    addressInput.on('input', function() {
-        clearTimeout(typingTimer);
-        if (addressInput.val()) {
-            typingTimer = setTimeout(getSuggestions, doneTypingInterval);
-        } else {
-            suggestionsDiv.empty();
+    // Inicializar geocodificador
+    const geocoder = L.Control.Geocoder.nominatim({
+        geocodingQueryParams: {
+            countrycodes: 'es',
+            limit: 5
         }
     });
 
-    function getSuggestions() {
-        const query = addressInput.val();
-        if (query.length < 3) return;
+    // Función para actualizar ubicación
+    function updateLocation(latlng, address = '') {
+        const lat = latlng.lat;
+        const lng = latlng.lng;
+        
+        document.getElementById('lat').value = lat.toFixed(8);
+        document.getElementById('lng').value = lng.toFixed(8);
+        
+        if (address) {
+            document.getElementById('address').value = address;
+        }
 
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=es`)
-            .then(response => response.json())
-            .then(data => {
-                suggestionsDiv.empty();
-                data.forEach(place => {
-                    const div = $('<div>')
-                        .addClass('suggestion')
-                        .text(place.display_name)
-                        .on('click', function() {
-                            addressInput.val(place.display_name);
-                            latInput.val(place.lat);
-                            lngInput.val(place.lon);
-                            cityInput.val(place.address?.city || place.address?.town || place.address?.village || '');
-                            
-                            // Actualizar marcador y mapa
-                            const newLatLng = [place.lat, place.lon];
-                            marker.setLatLng(newLatLng);
-                            map.setView(newLatLng, 15);
-                            
-                            suggestionsDiv.empty();
-                        });
-                    suggestionsDiv.append(div);
-                });
-            })
-            .catch(error => console.error('Error:', error));
+        marker.setLatLng(latlng);
+        map.setView(latlng, 15);
     }
 
-    $(document).on('click', function(e) {
-        if (!$(e.target).closest('#suggestions, #address').length) {
-            suggestionsDiv.empty();
+    // Función para buscar dirección
+    function searchAddress(address) {
+        const city = document.getElementById('city').value;
+        if (!city) {
+            alert('Por favor, introduce primero la ciudad');
+            return;
+        }
+
+        const searchQuery = `${address}, ${city}, España`;
+        geocoder.geocode(searchQuery, function(results) {
+            if (results.length > 0) {
+                const result = results[0];
+                updateLocation(result.center, result.name);
+            }
+        });
+    }
+
+    // Evento de cambio en el campo de dirección
+    let timeoutId;
+    document.getElementById('address').addEventListener('input', function() {
+        clearTimeout(timeoutId);
+        const address = this.value;
+        
+        if (address.length > 3) {
+            timeoutId = setTimeout(() => {
+                searchAddress(address);
+            }, 500);
         }
     });
-});
+
+    // Evento de cambio de ciudad
+    document.getElementById('city').addEventListener('change', function() {
+        const addressInput = document.getElementById('address');
+        addressInput.value = '';
+        
+        if (this.value) {
+            addressInput.removeAttribute('readonly');
+            addressInput.placeholder = "Escribe una dirección";
+        } else {
+            addressInput.setAttribute('readonly', 'readonly');
+            addressInput.placeholder = "Primero selecciona una ciudad";
+        }
+    });
+
+    // Actualizar coordenadas cuando se hace clic en el mapa
+    map.on('click', function(e) {
+        updateLocation(e.latlng);
+    });
+
+    // Eliminar el atributo readonly del campo de dirección al cargar la página
+    // si hay una ciudad seleccionada
+    window.addEventListener('load', function() {
+        const cityInput = document.getElementById('city');
+        const addressInput = document.getElementById('address');
+        
+        if (cityInput.value) {
+            addressInput.removeAttribute('readonly');
+            addressInput.placeholder = "Escribe una dirección";
+        }
+    });
 </script>
 
 <?php require_once '../../includes/footer.php'; ?> 

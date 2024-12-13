@@ -106,12 +106,19 @@ require_once 'includes/header.php';
         <div class="space-content">
             <div class="space-info">
                 <div class="info-section">
-                    <h2>Detalles</h2>
+                    <h2>Precios</h2>
                     <div class="price-tag">
-                        <?php if (isset($space['price']) && $space['price'] !== null): ?>
+                        <?php if (isset($space['price_day']) && $space['price_day'] !== null): ?>
                             <div class="price-item">
-                                <span class="amount"><?php echo number_format($space['price'], 2); ?>€</span>
+                                <span class="amount"><?php echo number_format($space['price_day'], 2); ?>€</span>
                                 <span class="period">por día</span>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if (isset($space['price_week']) && $space['price_week'] !== null): ?>
+                            <div class="price-item">
+                                <span class="amount"><?php echo number_format($space['price_week'], 2); ?>€</span>
+                                <span class="period">por semana</span>
                             </div>
                         <?php endif; ?>
                         
@@ -122,24 +129,66 @@ require_once 'includes/header.php';
                             </div>
                         <?php endif; ?>
 
-                        <?php if ((!isset($space['price']) || $space['price'] === null) && (!isset($space['price_month']) || $space['price_month'] === null)): ?>
+                        <?php if (isset($space['price_fixed']) && $space['price_fixed'] !== null): ?>
+                            <div class="price-item">
+                                <span class="amount"><?php echo number_format($space['price_fixed'], 2); ?>€</span>
+                                <span class="period">puesto fijo</span>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if ((!isset($space['price_day']) || $space['price_day'] === null) && 
+                                (!isset($space['price_week']) || $space['price_week'] === null) &&
+                                (!isset($space['price_month']) || $space['price_month'] === null) &&
+                                (!isset($space['price_fixed']) || $space['price_fixed'] === null)): ?>
                             <div class="price-item">
                                 <span class="amount">Consultar precios</span>
                             </div>
                         <?php endif; ?>
                     </div>
-                    <?php /*<div class="status-tag <?php echo $space['available'] ? 'available' : 'unavailable'; ?>">
-                        <?php echo $space['available'] ? 'Disponible' : 'No disponible'; ?>
-                    </div>*/?>
                 </div>
 
-                
                 <div class="info-section">
                     <h2>Descripción</h2>
                     <div class="description">
                         <?php echo nl2br(htmlspecialchars($space['description'])); ?>
                     </div>
                 </div>
+
+                <?php if (!empty($space['schedule'])): ?>
+                <div class="info-section">
+                    <h2>Horario</h2>
+                    <div class="schedule">
+                        <?php echo nl2br(htmlspecialchars($space['schedule'])); ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <?php if (!empty($space['services'])): ?>
+                <div class="info-section">
+                    <h2>Servicios</h2>
+                    <div class="services">
+                        <?php echo nl2br(htmlspecialchars($space['services'])); ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <?php if (!empty($space['capacity'])): ?>
+                <div class="info-section">
+                    <h2>Capacidad</h2>
+                    <div class="capacity">
+                        <?php echo nl2br(htmlspecialchars($space['capacity'])); ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <?php if (!empty($space['space_types'])): ?>
+                <div class="info-section">
+                    <h2>Tipos de Espacio</h2>
+                    <div class="space-types">
+                        <?php echo nl2br(htmlspecialchars($space['space_types'])); ?>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <div class="info-section">
                     <h2>Contacto</h2>
