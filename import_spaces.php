@@ -1,183 +1,107 @@
 <?php
-require_once 'config/database.php';
+/**
+ * Importa espacios de coworking desde un archivo CSV a la base de datos de WordPress.
+ */
 
-// Función para limpiar y formatear los datos
-function cleanData($str) {
-    if (empty($str)) return '';
-    return trim(str_replace(array('â‚¬', 'Ã³', 'Ã©', 'Ã±', 'Ã¨'), array('€', 'ó', 'é', 'ñ', 'è'), $str));
+// Incluir el archivo de configuración de WordPress
+require_once('wp-load.php');
+
+// Ruta al archivo CSV
+$archivo_csv = 'espacios.txt';
+// Abrir el archivo CSV
+if (!file_exists($archivo_csv) || !is_readable($archivo_csv)) {
+    die("El archivo CSV no existe o no es legible.");
 }
 
-// Función para extraer el precio del texto
-function extractPrice($details) {
-    if (empty($details)) return null;
-    preg_match('/(\d+)€/', $details, $matches);
-    return isset($matches[1]) ? floatval($matches[1]) : null;
-}
+$encabezados = [];
+$datos = [];
 
-// Función para descargar y guardar imagen
-function downloadAndSaveImage($url, $spaceId) {
-    if (empty($url)) return false;
-    
-    $uploadDir = 'uploads/spaces/';
-    
-    // Crear el directorio si no existe
-    if (!file_exists($uploadDir)) {
-        mkdir($uploadDir, 0777, true);
+// Leer el archivo CSV
+if (($handle = fopen($archivo_csv, 'r')) !== FALSE) {
+    while (($fila = fgetcsv($handle, 1000, ",")) !== FALSE) {
+        if (empty($encabezados)) {
+            $encabezados = $fila;
+        } else {
+            $datos[] = array_combine($encabezados, $fila);
+        }
     }
-    
-    // Generar nombre único para la imagen
-    $filename = uniqid() . '_' . md5($url) . '.jpg';
-    $filepath = $uploadDir . $filename;
-    
-    try {
-        // Configurar contexto para la descarga
-        $context = stream_context_create([
-            'http' => [
-                'timeout' => 30,
-                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            ]
-        ]);
-        
-        // Intentar descargar la imagen
-        $imageContent = @file_get_contents($url, false, $context);
-        if ($imageContent === false) {
-            error_log("No se pudo descargar la imagen: " . $url);
-            return false;
+    fclose($handle);
+}
+
+// Iterar sobre cada fila de datos y crear una entrada personalizada en WordPress
+foreach ($datos as $espacio) {
+    // Crear un nuevo post de tipo 'espacio_coworking'
+    $post_id = wp_insert_post([
+        'post_title'    => $espacio['Nombre'],
+        'post_content'  => $espacio['Detalles'],
+        'post_status'   => 'publish',
+        'post_type'     => 'espacio_coworking',
+    ]);
+
+    if ($post_id) {
+        // Agregar metadatos personalizados
+        update_post_meta($post_id, 'ciudad', $espacio['Ciudad']);
+        update_post_meta($post_id, 'direccion', $espacio['Dirección']);
+        update_post_meta($post_id, 'latitud', $espacio['Latitud']);
+        update_post_meta($post_id, 'longitud', $espacio['Longitud']);
+        update_post_meta($post_id, 'url_imagen', $espacio['URL_Imagen1']);
+        update_post_meta($post_id, 'telefono', $espacio['phone']);
+        update_post_meta($post_id, 'email', $espacio['email']);
+        update_post_meta($post_id, 'url', $espacio['URL']);
+
+        // Descargar y establecer la imagen destacada
+        $imagen_url = $espacio['URL_Imagen1'];
+        $imagen_id = descargar_imagen_desde_url($imagen_url, $post_id);
+        if ($imagen_id) {
+            set_post_thumbnail($post_id, $imagen_id);
         }
-        
-        // Guardar la imagen
-        if (file_put_contents($filepath, $imageContent)) {
-            return '/' . $filepath;
-        }
-        
-    } catch (Exception $e) {
-        error_log("Error al procesar la imagen: " . $e->getMessage());
+
+        echo "Espacio '{$espacio['Nombre']}' importado exitosamente.<br>";
+    } else {
+        echo "Error al importar el espacio '{$espacio['Nombre']}'.<br>";
+    }
+}
+
+/**
+ * Descarga una imagen desde una URL y la adjunta al post.
+ *
+ * @param string $url URL de la imagen.
+ * @param int $post_id ID del post al que se adjuntará la imagen.
+ * @return int|false ID de la imagen adjunta o false en caso de error.
+ */
+function descargar_imagen_desde_url($url, $post_id) {
+    require_once(ABSPATH . 'wp-admin/includes/image.php');
+    require_once(ABSPATH . 'wp-admin/includes/file.php');
+    require_once(ABSPATH . 'wp-admin/includes/media.php');
+
+    // Descargar la imagen al servidor
+    $tmp = download_url($url);
+
+    if (is_wp_error($tmp)) {
         return false;
     }
-    
-    return false;
-}
 
-function cleanPhone($phone) {
-    // Eliminar espacios y el prefijo +34
-    return preg_replace('/[^0-9]/', '', str_replace('+34', '', $phone));
-}
+    // Obtener el nombre de la imagen
+    $nombre_archivo = basename(parse_url($url, PHP_URL_PATH));
 
-try {
-    $db = Database::getInstance()->getConnection();
-    
-    // Verificar si el archivo existe
-    if (!file_exists('espacios.csv')) {
-        throw new Exception("El archivo espacios.csv no existe");
+    // Preparar el array para la subida
+    $archivo = [
+        'name'     => $nombre_archivo,
+        'type'     => mime_content_type($tmp),
+        'tmp_name' => $tmp,
+        'error'    => 0,
+        'size'     => filesize($tmp),
+    ];
+
+    // Subir la imagen a la biblioteca de medios
+    $id_imagen = media_handle_sideload($archivo, $post_id);
+
+    // Verificar si hubo un error
+    if (is_wp_error($id_imagen)) {
+        @unlink($tmp);
+        return false;
     }
-    
-    // Leer el archivo CSV
-    $file = fopen('espacios.csv', 'r');
-    if ($file === false) {
-        throw new Exception("No se pudo abrir el archivo CSV");
-    }
-    
-    // Saltar la primera línea (encabezados)
-    fgetcsv($file);
-    
-    // Preparar las consultas SQL
-    $stmtSpace = $db->prepare("
-        INSERT INTO spaces (
-            name, city, address, description, 
-            lat, lng, price_month, 
-            available, approved, user_id, phone, email
-        ) VALUES (
-            ?, ?, ?, ?, 
-            ?, ?, ?, 
-            1, 1, 1, ?, ?
-        )
-    ");
-    
-    $stmtImage = $db->prepare("
-        INSERT INTO space_images (
-            space_id, image_path, is_primary
-        ) VALUES (
-            ?, ?, ?
-        )
-    ");
-    
-    // Contador de espacios importados
-    $importados = 0;
-    $errores = 0;
-    
-    // Leer y procesar cada línea
-    while (($line = fgetcsv($file)) !== FALSE) {
-        if (count($line) < 9) {
-            error_log("Línea incompleta en CSV: " . implode(',', $line));
-            $errores++;
-            continue;
-        }
-        
-        $db->beginTransaction();
-        
-        try {
-            $name = cleanData($line[0]);
-            $city = cleanData($line[1]);
-            $address = cleanData($line[2]);
-            $details = cleanData($line[3]);
-            $lat = !empty($line[4]) ? floatval($line[4]) : 0;
-            $lng = !empty($line[5]) ? floatval($line[5]) : 0;
-            $url_image = cleanData($line[6]);
-            $phone = cleanData($line[8]); // Cambiado: ahora cogemos el teléfono de la columna email
-            $email = cleanData($line[7]); // Cambiado: el email estaba en la columna phone
-            
-            $price = extractPrice($details);
-            
-            // Validar datos obligatorios
-            if (empty($name) || empty($city) || empty($address)) {
-                throw new Exception("Datos obligatorios faltantes");
-            }
-            
-            // Insertar el espacio
-            $stmtSpace->execute([
-                $name,
-                $city,
-                $address,
-                $details,
-                $lat,
-                $lng,
-                $price,
-                $phone,
-                $email
-            ]);
-            
-            $spaceId = $db->lastInsertId();
-            
-            // Procesar la imagen si existe
-            if (!empty($line[6])) {
-                $imagePath = downloadAndSaveImage($line[6], $spaceId);
-                if ($imagePath) {
-                    $stmtImage->execute([
-                        $spaceId,
-                        $imagePath,
-                        1
-                    ]);
-                }
-            }
-            
-            $db->commit();
-            $importados++;
-            echo "Importado: $name\n";
-            
-        } catch (Exception $e) {
-            $db->rollBack();
-            $errores++;
-            error_log("Error al importar $name: " . $e->getMessage());
-            echo "Error al importar $name: " . $e->getMessage() . "\n";
-        }
-    }
-    
-    fclose($file);
-    echo "\nImportación completada:\n";
-    echo "- Espacios importados: $importados\n";
-    echo "- Errores encontrados: $errores\n";
-    
-} catch (Exception $e) {
-    echo "Error general: " . $e->getMessage() . "\n";
+
+    return $id_imagen;
 }
 ?> 

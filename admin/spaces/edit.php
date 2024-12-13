@@ -14,6 +14,7 @@ if (!$id) {
     header('Location: /admin');
     exit;
 }
+$pdo = Database::getInstance()->getConnection();
 
 $stmt = $pdo->prepare("SELECT * FROM spaces WHERE id = ?");
 $stmt->execute([$id]);
